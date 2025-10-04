@@ -84,11 +84,12 @@
 
 # Integrations
 
-* **OpenFoodFacts API**
+* **OpenFoodFacts API** ✅
 
   * Text search: query endpoint
   * Barcode: lookup by code
-    (We’ll wrap both with a tiny fetch service + response normalizer.)
+  * Smart caching with Supabase (7-day cache, offline support)
+  * See: [Open Food Facts Integration Guide](./docs/OPEN_FOOD_FACTS_INTEGRATION.md)
 * **Barcode scanning**
 
   * Web: `@zxing/browser` (good in desktop/mobile browsers)
@@ -118,3 +119,12 @@
    * (Then barcode scanning)
 
 After that, swap mock auth/storage for real backend, and package with Capacitor.
+
+# Documentation
+
+* **[Setup Guide](./docs/SETUP.md)** - Initial setup and configuration
+* **[Open Food Facts Integration](./docs/OPEN_FOOD_FACTS_INTEGRATION.md)** - API usage and caching details
+
+# Attribution
+
+This app uses data from [Open Food Facts](https://openfoodfacts.org), a collaborative, free and open database of food products from around the world.
