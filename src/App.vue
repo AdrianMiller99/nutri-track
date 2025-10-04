@@ -57,8 +57,8 @@ async function logout() {
 
 body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-  background: #f5f5f5;
-  color: #333;
+  background: #0a0a0a;
+  color: #ffffff;
 }
 
 #app {
@@ -67,8 +67,10 @@ body {
 
 /* Navigation */
 .navbar {
-  background: white;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  background: rgba(15, 15, 15, 0.8);
+  backdrop-filter: blur(20px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
   position: sticky;
   top: 0;
   z-index: 100;
@@ -87,7 +89,11 @@ body {
 .logo {
   font-size: 1.5rem;
   margin: 0;
-  color: #4CAF50;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  font-weight: 700;
 }
 
 .nav-links {
@@ -100,17 +106,18 @@ body {
   padding: 0.5rem 1rem;
   border-radius: 8px;
   text-decoration: none;
-  color: #666;
-  transition: background 0.2s, color 0.2s;
+  color: rgba(255, 255, 255, 0.7);
+  transition: all 0.2s;
+  font-weight: 500;
 }
 
 .nav-link:hover {
-  background: #f5f5f5;
-  color: #333;
+  background: rgba(255, 255, 255, 0.05);
+  color: rgba(255, 255, 255, 0.95);
 }
 
 .nav-link.router-link-active {
-  background: #4CAF50;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: white;
 }
 
@@ -121,22 +128,24 @@ body {
 }
 
 .user-email {
-  color: #666;
+  color: rgba(255, 255, 255, 0.6);
   font-size: 0.875rem;
 }
 
 .logout-btn {
   padding: 0.5rem 1rem;
-  background: #f44336;
+  background: rgba(244, 67, 54, 0.8);
   color: white;
   border: none;
   border-radius: 6px;
   cursor: pointer;
   font-size: 0.875rem;
+  transition: all 0.2s;
 }
 
 .logout-btn:hover {
-  background: #d32f2f;
+  background: rgba(211, 47, 47, 1);
+  transform: translateY(-1px);
 }
 
 /* Main Content */

@@ -239,12 +239,57 @@ async function handleSignup() {
   align-items: center;
   justify-content: center;
   padding: 2rem;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: #0a0a0a;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Animated Background Orbs */
+.auth-page::before,
+.auth-page::after {
+  content: '';
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(80px);
+  opacity: 0.5;
+  animation: float 20s infinite ease-in-out;
+  z-index: 0;
+}
+
+.auth-page::before {
+  width: 500px;
+  height: 500px;
+  background: linear-gradient(45deg, #667eea 0%, #764ba2 100%);
+  top: -250px;
+  right: -250px;
+}
+
+.auth-page::after {
+  width: 400px;
+  height: 400px;
+  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+  bottom: -200px;
+  left: -200px;
+  animation-delay: -10s;
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translate(0, 0) scale(1);
+  }
+  33% {
+    transform: translate(100px, -100px) scale(1.1);
+  }
+  66% {
+    transform: translate(-100px, 100px) scale(0.9);
+  }
 }
 
 .auth-container {
   max-width: 900px;
   width: 100%;
+  position: relative;
+  z-index: 1;
 }
 
 .auth-header {
@@ -256,21 +301,31 @@ async function handleSignup() {
 .auth-header h1 {
   font-size: 3rem;
   margin: 0 0 0.5rem 0;
-  text-shadow: 0 2px 10px rgba(0,0,0,0.2);
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
 .tagline {
   font-size: 1.25rem;
   margin: 0;
-  opacity: 0.95;
+  color: rgba(255, 255, 255, 0.9);
 }
 
 .auth-card {
-  background: white;
-  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 20px;
   padding: 2.5rem;
-  box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
   margin-bottom: 2rem;
+  transition: transform 0.3s ease;
+}
+
+.auth-card:hover {
+  transform: translateY(-5px);
 }
 
 /* Tabs */
@@ -278,7 +333,7 @@ async function handleSignup() {
   display: flex;
   gap: 0.5rem;
   margin-bottom: 2rem;
-  border-bottom: 2px solid #e0e0e0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .auth-tabs button {
@@ -290,23 +345,23 @@ async function handleSignup() {
   cursor: pointer;
   font-size: 1.1rem;
   font-weight: 500;
-  color: #666;
+  color: rgba(255, 255, 255, 0.6);
   transition: all 0.2s;
 }
 
 .auth-tabs button:hover {
-  color: #667eea;
+  color: rgba(255, 255, 255, 0.9);
 }
 
 .auth-tabs button.active {
-  color: #667eea;
+  color: white;
   border-bottom-color: #667eea;
 }
 
 /* Form */
 .auth-form h2 {
   margin: 0 0 1.5rem 0;
-  color: #333;
+  color: white;
   text-align: center;
 }
 
@@ -318,20 +373,27 @@ async function handleSignup() {
   display: block;
   margin-bottom: 0.5rem;
   font-weight: 500;
-  color: #333;
+  color: rgba(255, 255, 255, 0.9);
 }
 
 .form-group input {
   width: 100%;
   padding: 0.875rem;
-  border: 2px solid #e0e0e0;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 8px;
   font-size: 1rem;
-  transition: border-color 0.2s;
+  color: white;
+  transition: all 0.2s;
+}
+
+.form-group input::placeholder {
+  color: rgba(255, 255, 255, 0.4);
 }
 
 .form-group input:focus {
   outline: none;
+  background: rgba(255, 255, 255, 0.08);
   border-color: #667eea;
 }
 
@@ -339,7 +401,7 @@ async function handleSignup() {
   display: block;
   margin-top: 0.25rem;
   font-size: 0.875rem;
-  color: #666;
+  color: rgba(255, 255, 255, 0.6);
 }
 
 .submit-btn {
@@ -368,7 +430,7 @@ async function handleSignup() {
 .toggle-text {
   text-align: center;
   margin-top: 1.5rem;
-  color: #666;
+  color: rgba(255, 255, 255, 0.7);
 }
 
 .toggle-text a {
@@ -376,9 +438,11 @@ async function handleSignup() {
   font-weight: 600;
   cursor: pointer;
   text-decoration: none;
+  transition: color 0.2s;
 }
 
 .toggle-text a:hover {
+  color: #764ba2;
   text-decoration: underline;
 }
 
@@ -414,8 +478,9 @@ async function handleSignup() {
 
 /* Info Section */
 .info-section {
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.03);
   backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 16px;
   padding: 2rem;
   color: white;
@@ -425,6 +490,10 @@ async function handleSignup() {
   margin: 0 0 1.5rem 0;
   text-align: center;
   font-size: 1.5rem;
+  background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
 .features {
@@ -435,6 +504,11 @@ async function handleSignup() {
 
 .feature {
   text-align: center;
+  transition: transform 0.2s;
+}
+
+.feature:hover {
+  transform: translateY(-5px);
 }
 
 .feature .icon {
@@ -446,7 +520,7 @@ async function handleSignup() {
 .feature p {
   margin: 0;
   font-size: 0.95rem;
-  opacity: 0.95;
+  color: rgba(255, 255, 255, 0.8);
 }
 
 /* Responsive */

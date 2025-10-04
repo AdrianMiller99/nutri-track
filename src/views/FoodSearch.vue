@@ -249,6 +249,56 @@ async function addToLog() {
 
 <style scoped>
 .food-search {
+  min-height: 100vh;
+  background: #0a0a0a;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Animated Background */
+.food-search::before,
+.food-search::after {
+  content: '';
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(100px);
+  opacity: 0.4;
+  animation: float 25s infinite ease-in-out;
+  z-index: 0;
+}
+
+.food-search::before {
+  width: 500px;
+  height: 500px;
+  background: linear-gradient(45deg, #4facfe 0%, #00f2fe 100%);
+  top: -250px;
+  left: -250px;
+}
+
+.food-search::after {
+  width: 600px;
+  height: 600px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  bottom: -300px;
+  right: -300px;
+  animation-delay: -12s;
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translate(0, 0) scale(1);
+  }
+  50% {
+    transform: translate(50px, -50px) scale(1.05);
+  }
+}
+
+.food-search > * {
+  position: relative;
+  z-index: 1;
+}
+
+.food-search {
   max-width: 1200px;
   margin: 0 auto;
   padding: 2rem;
@@ -258,63 +308,92 @@ async function addToLog() {
   display: flex;
   gap: 0.5rem;
   margin-bottom: 1rem;
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 0.5rem;
 }
 
 .search-input, .barcode-input {
   flex: 1;
   padding: 0.75rem;
   font-size: 1rem;
-  border: 2px solid #e0e0e0;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 8px;
+  color: white;
+  transition: all 0.2s;
+}
+
+.search-input::placeholder, .barcode-input::placeholder {
+  color: rgba(255, 255, 255, 0.4);
 }
 
 .search-input:focus, .barcode-input:focus {
   outline: none;
-  border-color: #4CAF50;
+  background: rgba(255, 255, 255, 0.08);
+  border-color: #667eea;
 }
 
 button {
   padding: 0.75rem 1.5rem;
-  background: #4CAF50;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: white;
   border: none;
   border-radius: 8px;
   cursor: pointer;
   font-size: 1rem;
+  font-weight: 600;
+  transition: all 0.2s;
 }
 
 button:hover:not(:disabled) {
-  background: #45a049;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
 }
 
 button:disabled {
-  background: #ccc;
+  opacity: 0.5;
   cursor: not-allowed;
 }
 
 .clear-btn {
-  background: #f44336;
+  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
 }
 
 .cache-stats {
   margin-bottom: 1rem;
-  color: #666;
+  padding: 0.75rem 1rem;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 0.875rem;
 }
 
 .loading, .error {
   padding: 1rem;
   margin: 1rem 0;
-  border-radius: 8px;
+  border-radius: 12px;
+  backdrop-filter: blur(10px);
 }
 
 .loading {
-  background: #e3f2fd;
-  color: #1976d2;
+  background: rgba(33, 150, 243, 0.1);
+  border: 1px solid rgba(33, 150, 243, 0.2);
+  color: #4facfe;
 }
 
 .error {
-  background: #ffebee;
-  color: #c62828;
+  background: rgba(244, 67, 54, 0.1);
+  border: 1px solid rgba(244, 67, 54, 0.2);
+  color: #ff5252;
+}
+
+.results h2 {
+  color: white;
+  margin-bottom: 1.5rem;
 }
 
 .product-grid {
@@ -325,16 +404,20 @@ button:disabled {
 }
 
 .product-card {
-  border: 1px solid #e0e0e0;
-  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
   padding: 1rem;
   cursor: pointer;
-  transition: transform 0.2s, box-shadow 0.2s;
+  transition: all 0.3s;
 }
 
 .product-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  transform: translateY(-5px);
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.2);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.3);
 }
 
 .product-image {
@@ -342,16 +425,19 @@ button:disabled {
   height: 150px;
   object-fit: contain;
   margin-bottom: 0.5rem;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 8px;
+  padding: 0.5rem;
 }
 
 .product-info h3 {
   font-size: 1rem;
   margin: 0.5rem 0;
-  color: #333;
+  color: white;
 }
 
 .brand {
-  color: #666;
+  color: rgba(255, 255, 255, 0.6);
   font-size: 0.875rem;
   margin: 0.25rem 0;
 }
@@ -361,19 +447,19 @@ button:disabled {
   gap: 0.5rem;
   flex-wrap: wrap;
   font-size: 0.75rem;
-  color: #888;
   margin-top: 0.5rem;
 }
 
 .nutrients span {
-  background: #f5f5f5;
+  background: rgba(102, 126, 234, 0.2);
+  color: rgba(255, 255, 255, 0.9);
   padding: 0.25rem 0.5rem;
   border-radius: 4px;
 }
 
 .serving-info {
   font-size: 0.75rem;
-  color: #666;
+  color: rgba(255, 255, 255, 0.5);
   margin-top: 0.5rem;
 }
 
@@ -384,7 +470,8 @@ button:disabled {
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0,0,0,0.5);
+  background: rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(5px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -393,31 +480,45 @@ button:disabled {
 }
 
 .modal-content {
-  background: white;
-  border-radius: 12px;
+  background: rgba(15, 15, 15, 0.95);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
   max-width: 600px;
   width: 100%;
   max-height: 90vh;
   overflow-y: auto;
   position: relative;
   padding: 2rem;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
 }
 
 .close-btn {
   position: absolute;
   top: 1rem;
   right: 1rem;
-  background: transparent;
-  color: #666;
-  font-size: 2rem;
-  padding: 0;
+  background: rgba(255, 255, 255, 0.05);
+  color: white;
+  font-size: 1.5rem;
+  padding: 0.5rem;
   width: 40px;
   height: 40px;
   line-height: 1;
+  border-radius: 8px;
+  transition: all 0.2s;
+}
+
+.close-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
 }
 
 .product-detail {
   text-align: center;
+}
+
+.product-detail h2 {
+  color: white;
+  margin: 1rem 0;
 }
 
 .detail-image {
@@ -425,33 +526,55 @@ button:disabled {
   max-height: 200px;
   object-fit: contain;
   margin-bottom: 1rem;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 12px;
+  padding: 1rem;
 }
 
 .barcode {
-  color: #666;
+  color: rgba(255, 255, 255, 0.6);
   font-size: 0.875rem;
   font-family: monospace;
 }
 
 .serving-calculator {
   margin: 2rem 0;
-  padding: 1rem;
-  background: #f5f5f5;
-  border-radius: 8px;
+  padding: 1.5rem;
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
   text-align: left;
+}
+
+.serving-calculator h3,
+.serving-calculator h4 {
+  color: white;
 }
 
 .serving-calculator label {
   display: block;
   margin: 1rem 0;
+  color: rgba(255, 255, 255, 0.9);
+  font-weight: 500;
 }
 
 .serving-calculator input {
   width: 100%;
-  padding: 0.5rem;
+  padding: 0.75rem;
   margin-top: 0.5rem;
-  border: 1px solid #ddd;
-  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  font-size: 1rem;
+  color: white;
+  transition: all 0.2s;
+}
+
+.serving-calculator input:focus {
+  outline: none;
+  background: rgba(255, 255, 255, 0.08);
+  border-color: #667eea;
 }
 
 .calculated-nutrients {
@@ -465,8 +588,9 @@ button:disabled {
 }
 
 .calculated-nutrients td {
-  padding: 0.5rem;
-  border-bottom: 1px solid #e0e0e0;
+  padding: 0.75rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.9);
 }
 
 .calculated-nutrients td:first-child {
@@ -475,34 +599,53 @@ button:disabled {
 
 .calculated-nutrients td:last-child {
   text-align: right;
+  color: white;
+  font-weight: 600;
 }
 
 .product-meta {
   margin: 1rem 0;
   text-align: left;
   font-size: 0.875rem;
+  color: rgba(255, 255, 255, 0.7);
 }
 
 .product-meta p {
-  margin: 0.5rem 0;
+  margin: 0.75rem 0;
+}
+
+.product-meta strong {
+  color: rgba(255, 255, 255, 0.9);
 }
 
 .add-btn {
   width: 100%;
-  padding: 1rem;
+  padding: 1.25rem;
   font-size: 1.1rem;
-  margin-top: 1rem;
+  margin-top: 1.5rem;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  font-weight: 700;
+  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+}
+
+.add-btn:hover {
+  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
 }
 
 .attribution {
-  margin-top: 1rem;
+  margin-top: 1.5rem;
   font-size: 0.75rem;
-  color: #666;
+  color: rgba(255, 255, 255, 0.5);
 }
 
 .attribution a {
-  color: #4CAF50;
+  color: #667eea;
   text-decoration: none;
+  transition: color 0.2s;
+}
+
+.attribution a:hover {
+  color: #764ba2;
 }
 </style>
 
