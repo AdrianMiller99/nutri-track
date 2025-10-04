@@ -47,7 +47,25 @@ supabase db push
 2. Copy the contents of `supabase/migrations/001_create_products_cache.sql`
 3. Paste and run it in the SQL Editor
 
-### 4. Start Development Server
+### 4. Deploy Edge Functions (Required to fix CORS)
+
+Deploy the proxy functions to avoid CORS issues:
+
+```bash
+# Login to Supabase CLI
+npx supabase login
+
+# Link your project (if not done above)
+npx supabase link --project-ref your-project-ref
+
+# Deploy the functions
+npx supabase functions deploy search-products
+npx supabase functions deploy get-product
+```
+
+**Detailed instructions**: See [Deploying Edge Functions](./DEPLOYING_EDGE_FUNCTIONS.md)
+
+### 5. Start Development Server
 
 ```bash
 npm run dev

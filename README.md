@@ -123,6 +123,7 @@ After that, swap mock auth/storage for real backend, and package with Capacitor.
 # Documentation
 
 * **[Setup Guide](./docs/SETUP.md)** - Initial setup and configuration
+* **[Deploying Edge Functions](./docs/DEPLOYING_EDGE_FUNCTIONS.md)** - Fix CORS issues (required!)
 * **[Open Food Facts Integration](./docs/OPEN_FOOD_FACTS_INTEGRATION.md)** - API usage and caching details
 
 # Attribution

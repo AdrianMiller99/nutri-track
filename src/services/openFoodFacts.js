@@ -5,10 +5,18 @@
  * 
  * Rate limit: ~100 requests/min is reasonable
  * Always attribute: "Data from Open Food Facts"
+ * 
+ * Note: Uses Supabase Edge Functions as proxy to avoid CORS issues
  */
 
+// Use Supabase Edge Functions as proxy (avoids CORS)
+const USE_EDGE_FUNCTIONS = true
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL
+const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY
+
+// Direct API (only works in Node.js/mobile, not browser due to CORS)
 const OFF_API_BASE = 'https://world.openfoodfacts.org'
-const USER_AGENT = 'NutriTrack/0.1.0 (https://github.com/yourusername/nutri-track)' // Update with your info
+const USER_AGENT = 'NutriTrack/0.1.0 (https://github.com/AdrianMiller99/nutri-track)'
 
 /**
  * Normalize product data from Open Food Facts into our app format
@@ -66,22 +74,43 @@ export async function searchProducts(query, page = 1, pageSize = 25) {
   }
 
   try {
-    const params = new URLSearchParams({
-      search_terms: query.trim(),
-      page: page.toString(),
-      page_size: pageSize.toString(),
-      json: '1',
-      fields: 'code,product_name,product_name_en,brands,image_url,image_front_url,nutriments,serving_size,serving_quantity,categories,labels,nutriscore_grade,nova_group'
-    })
+    let url, fetchOptions
 
-    const response = await fetch(`${OFF_API_BASE}/cgi/search.pl?${params}`, {
-      headers: {
-        'User-Agent': USER_AGENT
+    if (USE_EDGE_FUNCTIONS) {
+      // Use Supabase Edge Function as proxy
+      const params = new URLSearchParams({
+        query: query.trim(),
+        page: page.toString(),
+        pageSize: pageSize.toString()
+      })
+      url = `${SUPABASE_URL}/functions/v1/search-products?${params}`
+      fetchOptions = {
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+        }
       }
-    })
+    } else {
+      // Direct API call (CORS issues in browser!)
+      const params = new URLSearchParams({
+        search_terms: query.trim(),
+        page: page.toString(),
+        page_size: pageSize.toString(),
+        json: '1',
+        fields: 'code,product_name,product_name_en,brands,image_url,image_front_url,nutriments,serving_size,serving_quantity,categories,labels,nutriscore_grade,nova_group'
+      })
+      url = `${OFF_API_BASE}/cgi/search.pl?${params}`
+      fetchOptions = {
+        headers: {
+          'User-Agent': USER_AGENT
+        }
+      }
+    }
+
+    const response = await fetch(url, fetchOptions)
 
     if (!response.ok) {
-      throw new Error(`OFF API error: ${response.status} ${response.statusText}`)
+      throw new Error(`API error: ${response.status} ${response.statusText}`)
     }
 
     const data = await response.json()
@@ -109,17 +138,35 @@ export async function getProductByBarcode(barcode) {
   }
 
   try {
-    const response = await fetch(`${OFF_API_BASE}/api/v2/product/${barcode}`, {
-      headers: {
-        'User-Agent': USER_AGENT
+    let url, fetchOptions
+
+    if (USE_EDGE_FUNCTIONS) {
+      // Use Supabase Edge Function as proxy
+      const params = new URLSearchParams({ barcode })
+      url = `${SUPABASE_URL}/functions/v1/get-product?${params}`
+      fetchOptions = {
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+        }
       }
-    })
+    } else {
+      // Direct API call (CORS issues in browser!)
+      url = `${OFF_API_BASE}/api/v2/product/${barcode}`
+      fetchOptions = {
+        headers: {
+          'User-Agent': USER_AGENT
+        }
+      }
+    }
+
+    const response = await fetch(url, fetchOptions)
 
     if (!response.ok) {
       if (response.status === 404) {
         return null // Product not found
       }
-      throw new Error(`OFF API error: ${response.status} ${response.statusText}`)
+      throw new Error(`API error: ${response.status} ${response.statusText}`)
     }
 
     const data = await response.json()

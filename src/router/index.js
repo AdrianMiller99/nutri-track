@@ -1,5 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import FoodSearch from '@/views/FoodSearch.vue'
+
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -17,6 +19,11 @@ const router = createRouter({
       component: () => import('@/views/Dashboard.vue'),
       meta: { requiresAuth: true },
     },
+    {
+      path: '/app/search',
+      name: 'FoodSearch',
+      component: FoodSearch
+    }
   ],
 })
 
