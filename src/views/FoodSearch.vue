@@ -1,5 +1,12 @@
 <template>
   <div class="food-search">
+    <!-- Animated Background -->
+    <div class="background">
+      <div class="gradient-orb orb-1"></div>
+      <div class="gradient-orb orb-2"></div>
+    </div>
+
+    <div class="search-content">
     <h1>Search Food</h1>
     
     <!-- Search Input -->
@@ -159,6 +166,7 @@
         </div>
       </div>
     </div>
+    </div>
   </div>
 </template>
 
@@ -252,22 +260,28 @@ async function addToLog() {
   min-height: 100vh;
   background: #0a0a0a;
   position: relative;
-  overflow: hidden;
 }
 
 /* Animated Background */
-.food-search::before,
-.food-search::after {
-  content: '';
+.background {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+  overflow: hidden;
+}
+
+.gradient-orb {
   position: absolute;
   border-radius: 50%;
   filter: blur(100px);
   opacity: 0.4;
   animation: float 25s infinite ease-in-out;
-  z-index: 0;
 }
 
-.food-search::before {
+.orb-1 {
   width: 500px;
   height: 500px;
   background: linear-gradient(45deg, #4facfe 0%, #00f2fe 100%);
@@ -275,7 +289,7 @@ async function addToLog() {
   left: -250px;
 }
 
-.food-search::after {
+.orb-2 {
   width: 600px;
   height: 600px;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -293,12 +307,9 @@ async function addToLog() {
   }
 }
 
-.food-search > * {
+.search-content {
   position: relative;
   z-index: 1;
-}
-
-.food-search {
   max-width: 1200px;
   margin: 0 auto;
   padding: 2rem;
@@ -466,7 +477,7 @@ button:disabled {
 /* Modal */
 .modal {
   position: fixed;
-  top: 0;
+  top: 50;
   left: 0;
   right: 0;
   bottom: 0;

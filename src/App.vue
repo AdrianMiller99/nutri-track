@@ -23,7 +23,9 @@ async function logout() {
     <!-- Navigation Bar (only show when logged in and not on landing/auth) -->
     <nav v-if="authStore.user && route.path !== '/' && route.path !== '/auth'" class="navbar">
       <div class="nav-container">
-        <h1 class="logo">🍎 NutriTrack</h1>
+        <router-link to="/" class="logo-link">
+          <h1 class="logo">🍎 NutriTrack</h1>
+        </router-link>
         
         <div class="nav-links">
           <router-link to="/app/dashboard" class="nav-link">
@@ -84,6 +86,16 @@ body {
   align-items: center;
   justify-content: space-between;
   gap: 2rem;
+}
+
+.logo-link {
+  text-decoration: none;
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+.logo-link:hover {
+  transform: translateY(-2px);
 }
 
 .logo {

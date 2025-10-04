@@ -5,6 +5,14 @@ import FoodSearch from '@/views/FoodSearch.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
+  scrollBehavior(to, from, savedPosition) {
+    // Always scroll to top when navigating
+    if (savedPosition) {
+      return savedPosition
+    } else {
+      return { top: 0, behavior: 'smooth' }
+    }
+  },
   routes: [
     {
       path: '/',
@@ -36,8 +44,8 @@ router.beforeEach((to) => {
     return '/auth'
   }
   
-  // Redirect to dashboard if logged in user visits landing or auth page
-  if ((to.path === '/' || to.path === '/auth') && auth.user) {
+  // Redirect to dashboard if logged in user visits auth page
+  if (to.path === '/auth' && auth.user) {
     return '/app/dashboard'
   }
 })
