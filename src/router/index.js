@@ -22,14 +22,24 @@ const router = createRouter({
     {
       path: '/app/search',
       name: 'FoodSearch',
-      component: FoodSearch
+      component: FoodSearch,
+      meta: { requiresAuth: true }
     }
   ],
 })
 
 router.beforeEach((to) => {
   const auth = useAuthStore()
-  if (to.meta.requiresAuth && !auth.user) return '/auth'
+  
+  // Redirect to auth if route requires authentication and user is not logged in
+  if (to.meta.requiresAuth && !auth.user) {
+    return '/auth'
+  }
+  
+  // Redirect to dashboard if logged in user visits landing or auth page
+  if ((to.path === '/' || to.path === '/auth') && auth.user) {
+    return '/app/dashboard'
+  }
 })
 
 export default router

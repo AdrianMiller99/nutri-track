@@ -164,9 +164,15 @@
 
 <script setup>
 import { ref, computed } from 'vue'
+import { useRouter } from 'vue-router'
 import { useFoodStore } from '@/stores/food'
+import { useDayStore } from '@/stores/day'
+import { useAuthStore } from '@/stores/auth'
 
+const router = useRouter()
 const foodStore = useFoodStore()
+const dayStore = useDayStore()
+const authStore = useAuthStore()
 
 const query = ref('')
 const barcode = ref('')
@@ -214,11 +220,30 @@ const calculatedNutrients = computed(() => {
   return foodStore.calculateServingNutrients(selectedProduct.value, servingGrams.value)
 })
 
-function addToLog() {
-  // TODO: Implement adding to user's daily log
-  // This would use a separate store (useDayStore) to add the entry
-  alert(`Added ${servingGrams.value}g of ${selectedProduct.value.name} to today!`)
-  closeModal()
+async function addToLog() {
+  if (!authStore.user) {
+    alert('Please log in to add foods to your diary')
+    router.push('/auth')
+    return
+  }
+
+  if (!selectedProduct.value || servingGrams.value <= 0) return
+
+  try {
+    await dayStore.addItem(
+      selectedProduct.value,
+      servingGrams.value,
+      calculatedNutrients.value
+    )
+    
+    alert(`✅ Added ${servingGrams.value}g of ${selectedProduct.value.name} to ${dayStore.isToday ? 'today' : dayStore.selectedDate}!`)
+    closeModal()
+    
+    // Optionally redirect to dashboard
+    // router.push('/app/dashboard')
+  } catch (error) {
+    alert('❌ Failed to add food: ' + error.message)
+  }
 }
 </script>
 

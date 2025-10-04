@@ -2,38 +2,49 @@
 
 **Elevator pitch:** A Vue + Capacitor app where users sign in, log foods/drinks via search or barcode, and see daily nutrients at a glance with easy day-to-day comparisons.
 
-**Primary user goal:** Track today’s intake quickly; review trends without friction.
+**Primary user goal:** Track today's intake quickly; review trends without friction.
+
+## 🚀 Quick Start
+
+**New to the project?** → Read the [Quick Start Guide](./docs/QUICK_START.md) to get running in 5 minutes!
+
+**Key Commands:**
+```bash
+npm install              # Install dependencies
+npm run dev              # Start dev server
+deploy-functions.bat     # Deploy Supabase Edge Functions (Windows)
+```
 
 # MVP scope (MoSCoW)
 
-**Must-have**
+**Must-have** ✅
 
-* Auth (email/password or OAuth)
-* Dashboard: today’s calories + key macros (kcal, protein, carbs, fat); switch day (prev/next)
-* “Add item” flow:
-
-  * Search OpenFoodFacts by text
-  * Scan barcode to lookup product
-  * Add serving(s) to today; auto-calc nutrients
-* History view: list of past days; simple compare to yesterday
+* ✅ Auth (email/password)
+* ✅ Dashboard: today's calories + key macros (kcal, protein, carbs, fat); switch day (prev/next)
+* ✅ "Add item" flow:
+  * ✅ Search OpenFoodFacts by text
+  * ✅ Add serving(s) to today; auto-calc nutrients
+  * 🚧 Scan barcode to lookup product (API ready, needs camera integration)
+* 🚧 History view: list of past days (can navigate days, but no history list yet)
 
 **Should-have**
 
-* Edit/delete logged items
-* Basic targets (calorie goal) and progress ring
-* Cache product lookups locally (perf/offline)
+* ✅ Edit/delete logged items
+* ✅ Cache product lookups locally (perf/offline)
+* ✅ Show additional micronutrients (fiber, sugar, sodium)
+* 🚧 Basic targets (calorie goal) and progress ring
 
 **Could-have**
 
 * Quick-add recent/favorites
 * Multiple meals (breakfast/lunch/dinner)
-* Micronutrients (fiber, sugar, sodium) toggles
+* Day comparison view
 
-**Won’t-have (yet)**
+**Won't-have (yet)**
 
 * Social features
 * Complex coaching/AI
-* Custom food creation (we’ll add later)
+* Custom food creation (we'll add later)
 
 # App structure (routes)
 
@@ -123,8 +134,33 @@ After that, swap mock auth/storage for real backend, and package with Capacitor.
 # Documentation
 
 * **[Setup Guide](./docs/SETUP.md)** - Initial setup and configuration
+* **[Migration Guide](./docs/MIGRATION_GUIDE.md)** - Database migrations walkthrough
 * **[Deploying Edge Functions](./docs/DEPLOYING_EDGE_FUNCTIONS.md)** - Fix CORS issues (required!)
 * **[Open Food Facts Integration](./docs/OPEN_FOOD_FACTS_INTEGRATION.md)** - API usage and caching details
+
+# Features
+
+## ✅ Implemented
+
+- **Authentication** - Email/password signup and login with Supabase Auth
+- **Food Search** - Search 3M+ products from Open Food Facts
+- **Smart Caching** - Products cached locally for offline use (7-day expiry)
+- **Daily Dashboard** - View today's nutrition totals with day navigation
+- **Food Logging** - Add foods with custom serving sizes
+- **Edit/Delete** - Modify or remove logged items
+- **Macro Tracking** - Calories, protein, carbs, fat, fiber, sugar, sodium
+- **Responsive UI** - Works on desktop and mobile browsers
+
+## 🚧 In Progress
+
+- **Barcode Scanning** - Camera integration for mobile
+- **History View** - Calendar view of past entries
+- **Goals & Targets** - Set daily calorie/macro goals
+
+## 📱 Mobile App
+
+- Capacitor setup complete for Android
+- Ready to build APK for testing
 
 # Attribution
 
