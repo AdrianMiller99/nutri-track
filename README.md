@@ -136,6 +136,7 @@ After that, swap mock auth/storage for real backend, and package with Capacitor.
 * **[Setup Guide](./docs/SETUP.md)** - Initial setup and configuration
 * **[Migration Guide](./docs/MIGRATION_GUIDE.md)** - Database migrations walkthrough
 * **[Deploying Edge Functions](./docs/DEPLOYING_EDGE_FUNCTIONS.md)** - Fix CORS issues (required!)
+* **[GitHub Pages Deployment](./docs/GITHUB_PAGES_DEPLOYMENT.md)** - Deploy to GitHub Pages (free hosting!)
 * **[Open Food Facts Integration](./docs/OPEN_FOOD_FACTS_INTEGRATION.md)** - API usage and caching details
 
 # Features
