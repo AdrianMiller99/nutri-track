@@ -143,9 +143,16 @@
           <h2>Scan Barcode</h2>
           <button @click="stopBrowserScanner" class="scanner-close-btn">×</button>
         </div>
-        <div id="qr-reader"></div>
+        
+        <div class="video-container">
+          <video id="barcode-video" autoplay playsinline></video>
+          <div class="scan-overlay">
+            <div class="scan-line"></div>
+          </div>
+        </div>
+        
         <p class="scanner-instructions">
-          📷 Hold barcode steady within the frame<br>
+          📷 Position barcode within the frame<br>
           <small>Supports EAN-13, UPC, Code-128, QR codes, and more</small>
         </p>
         
@@ -273,7 +280,6 @@ import { useDayStore } from '@/stores/day'
 import { useAuthStore } from '@/stores/auth'
 import { BarcodeScanner } from '@capacitor-mlkit/barcode-scanning'
 import { Capacitor } from '@capacitor/core'
-import Quagga from '@ericblade/quagga2'
 
 const router = useRouter()
 const foodStore = useFoodStore()
@@ -292,7 +298,8 @@ const showBrowserScanner = ref(false)
 const manualBarcode = ref('')
 
 let intersectionObserver = null
-let quaggaInitialized = false
+let barcodeDetector = null
+let videoStream = null
 
 // Detect if we're on a mobile platform and measure navbar height
 onMounted(() => {
@@ -310,7 +317,7 @@ onUnmounted(() => {
   window.removeEventListener('resize', measureNavbarHeight)
   
   // Clean up browser scanner if active
-  if (quaggaInitialized) {
+  if (videoStream) {
     stopBrowserScanner()
   }
 })
@@ -463,102 +470,117 @@ async function scanBarcodeNative() {
 
 async function scanBarcodeBrowser() {
   try {
+    // Check if Barcode Detection API is supported
+    if (!('BarcodeDetector' in window)) {
+      console.warn('[Browser Scanner] Barcode Detection API not supported')
+      alert('Barcode scanning is not supported in this browser. Please use the manual entry option or try Chrome/Edge on Android.')
+      showBrowserScanner.value = true // Show the modal with manual entry
+      return
+    }
+    
     showBrowserScanner.value = true
     
     // Wait for the DOM to be ready
     await nextTick()
     
-    console.log('[Browser Scanner] Starting camera with Quagga2...')
+    console.log('[Browser Scanner] Starting camera with native Barcode Detection API...')
     
-    const config = {
-      inputStream: {
-        name: 'Live',
-        type: 'LiveStream',
-        target: document.querySelector('#qr-reader'),
-        constraints: {
-          width: { min: 640 },
-          height: { min: 480 },
-          facingMode: 'environment', // Use back camera on mobile
-          aspectRatio: { min: 1, max: 2 }
-        },
-        area: { // defines rectangle of the detection/localization area
-          top: '20%',    // top offset
-          right: '10%',  // right offset
-          left: '10%',   // left offset
-          bottom: '20%'  // bottom offset
-        },
-      },
-      decoder: {
-        readers: [
-          'ean_reader',        // EAN-13, EAN-8
-          'ean_8_reader',      // EAN-8
-          'code_128_reader',   // Code 128
-          'code_39_reader',    // Code 39
-          'upc_reader',        // UPC-A, UPC-E
-          'upc_e_reader',      // UPC-E
-        ],
-        debug: {
-          drawBoundingBox: true,
-          showFrequency: true,
-          drawScanline: true,
-          showPattern: true
-        },
-        multiple: false
-      },
-      locate: true,
-      frequency: 10,
-      locator: {
-        patchSize: 'medium',
-        halfSample: true
-      },
-      numOfWorkers: 4,
+    // Get supported formats
+    const supportedFormats = await BarcodeDetector.getSupportedFormats()
+    console.log('[Browser Scanner] Supported formats:', supportedFormats)
+    
+    // Initialize the BarcodeDetector with the formats we need
+    const formats = supportedFormats.filter(format => 
+      ['ean_13', 'ean_8', 'upc_a', 'upc_e', 'code_128', 'code_39', 'qr_code'].includes(format)
+    )
+    
+    barcodeDetector = new BarcodeDetector({ formats })
+    console.log('[Browser Scanner] Detector initialized with formats:', formats)
+    
+    // Get video element
+    const video = document.getElementById('barcode-video')
+    if (!video) {
+      throw new Error('Video element not found')
     }
     
-    Quagga.init(config, (err) => {
-      if (err) {
-        console.error('[Browser Scanner] Initialization error:', err)
-        alert('Failed to start camera: ' + err.message)
-        stopBrowserScanner()
-        return
+    // Request camera access
+    videoStream = await navigator.mediaDevices.getUserMedia({
+      video: {
+        facingMode: { ideal: 'environment' }, // Prefer back camera
+        width: { ideal: 1280 },
+        height: { ideal: 720 }
       }
-      console.log('[Browser Scanner] Camera started successfully')
-      Quagga.start()
-      quaggaInitialized = true
     })
     
-    // Set up detection handler
-    Quagga.onDetected(async (result) => {
-      const code = result.codeResult.code
-      const format = result.codeResult.format
-      
-      console.log('[Browser Scanner] ✅ Scanned successfully:', code)
-      console.log('[Browser Scanner] Format:', format)
-      console.log('[Browser Scanner] Confidence:', result.codeResult.decodedCodes)
-      
-      // Only accept high-confidence scans
-      if (result.codeResult.decodedCodes.length > 0) {
-        // Stop scanner and handle barcode
-        await stopBrowserScanner()
-        await handleScannedBarcode(code)
-      }
-    })
+    video.srcObject = videoStream
+    await video.play()
+    
+    console.log('[Browser Scanner] Camera started successfully')
+    
+    // Start continuous scanning
+    scanFrame(video)
     
   } catch (error) {
     console.error('[Browser Scanner] Error:', error)
-    alert('Failed to start camera. Please ensure you have granted camera permissions.')
+    const message = error.name === 'NotAllowedError' 
+      ? 'Camera permission denied. Please allow camera access and try again.'
+      : 'Failed to start camera: ' + error.message
+    alert(message)
     await stopBrowserScanner()
   }
 }
 
+async function scanFrame(video) {
+  if (!barcodeDetector || !videoStream) {
+    return // Scanner was stopped
+  }
+  
+  try {
+    const barcodes = await barcodeDetector.detect(video)
+    
+    if (barcodes.length > 0) {
+      const barcode = barcodes[0]
+      console.log('[Browser Scanner] ✅ Detected barcode:', barcode.rawValue)
+      console.log('[Browser Scanner] Format:', barcode.format)
+      console.log('[Browser Scanner] Bounding box:', barcode.boundingBox)
+      
+      // Stop scanning and handle the barcode
+      await stopBrowserScanner()
+      await handleScannedBarcode(barcode.rawValue)
+      return
+    }
+  } catch (error) {
+    // Detection errors are normal when no barcode is visible
+    // Only log unexpected errors
+    if (error.name !== 'NotSupportedError') {
+      console.debug('[Browser Scanner] Detection error:', error.message)
+    }
+  }
+  
+  // Continue scanning (requestAnimationFrame for smooth performance)
+  requestAnimationFrame(() => scanFrame(video))
+}
+
 async function stopBrowserScanner() {
   try {
-    if (quaggaInitialized) {
-      console.log('[Browser Scanner] Stopping Quagga...')
-      Quagga.offDetected()
-      Quagga.stop()
-      console.log('[Browser Scanner] Stopped successfully')
-      quaggaInitialized = false
+    console.log('[Browser Scanner] Stopping...')
+    
+    // Stop video stream
+    if (videoStream) {
+      videoStream.getTracks().forEach(track => track.stop())
+      videoStream = null
     }
+    
+    // Clear video element
+    const video = document.getElementById('barcode-video')
+    if (video) {
+      video.srcObject = null
+    }
+    
+    // Clear detector
+    barcodeDetector = null
+    
+    console.log('[Browser Scanner] Stopped successfully')
   } catch (error) {
     console.error('[Browser Scanner] Error stopping:', error)
   } finally {
@@ -1203,34 +1225,64 @@ button:disabled {
   transform: none;
 }
 
-#qr-reader {
-  border-radius: 12px;
-  overflow: hidden;
-  background: #000;
+.video-container {
   position: relative;
   width: 100%;
-  min-height: 400px;
-}
-
-#qr-reader video {
-  width: 100%;
-  height: auto;
+  background: #000;
   border-radius: 12px;
+  overflow: hidden;
+  aspect-ratio: 16 / 9;
 }
 
-#qr-reader canvas {
-  position: absolute;
-  top: 0;
-  left: 0;
+#barcode-video {
   width: 100%;
   height: 100%;
+  object-fit: cover;
+  display: block;
 }
 
-/* Quagga2 detection overlays */
-#qr-reader canvas.drawingBuffer {
+.scan-overlay {
   position: absolute;
   top: 0;
   left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+}
+
+.scan-overlay::before {
+  content: '';
+  position: absolute;
+  top: 20%;
+  left: 10%;
+  right: 10%;
+  bottom: 20%;
+  border: 2px solid rgba(102, 126, 234, 0.8);
+  border-radius: 8px;
+  box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.3);
+}
+
+.scan-line {
+  position: absolute;
+  top: 20%;
+  left: 10%;
+  right: 10%;
+  height: 2px;
+  background: linear-gradient(90deg, 
+    transparent 0%, 
+    rgba(102, 126, 234, 0.8) 50%, 
+    transparent 100%
+  );
+  animation: scan-animation 2s ease-in-out infinite;
+}
+
+@keyframes scan-animation {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(calc(60vh * 0.6));
+  }
 }
 
 .scanner-instructions {
@@ -1296,8 +1348,17 @@ button:disabled {
     padding: 1rem;
   }
   
-  #qr-reader {
-    min-height: 300px;
+  .video-container {
+    aspect-ratio: 4 / 3;
+  }
+  
+  @keyframes scan-animation {
+    0%, 100% {
+      transform: translateY(0);
+    }
+    50% {
+      transform: translateY(200px);
+    }
   }
 }
 
