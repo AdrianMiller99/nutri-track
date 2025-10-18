@@ -1,0 +1,190 @@
+{
+  "app": {
+    "name": "NutriTrack",
+    "tagline": "Track Your Nutrition, Transform Your Life"
+  },
+  "nav": {
+    "dashboard": "Dashboard",
+    "search": "Search",
+    "logout": "Logout"
+  },
+  "home": {
+    "title": "Welcome to NutriTrack",
+    "subtitle": "Track your nutrition journey with elegance",
+    "description": "Simple, powerful, and beautiful nutrition tracking. Search from millions of foods, track your macros, and reach your goals.",
+    "featuresTitle": "Everything you need",
+    "stats": {
+      "foods": "Foods",
+      "freeLabel": "Free",
+      "forever": "Forever",
+      "privateLabel": "Private",
+      "secure": "& Secure"
+    },
+    "features": {
+      "search": {
+        "title": "Smart Search",
+        "description": "Search from 3 million+ products from Open Food Facts database"
+      },
+      "track": {
+        "title": "Track Everything",
+        "description": "Monitor calories, macros, and micronutrients with detailed insights"
+      },
+      "fast": {
+        "title": "Lightning Fast",
+        "description": "Smart caching for instant searches and offline functionality"
+      },
+      "multiPlatform": {
+        "title": "Multi-Platform",
+        "description": "Works seamlessly on web and mobile (Android coming soon)"
+      },
+      "privacy": {
+        "title": "Privacy First",
+        "description": "Your data belongs to you. Secure, encrypted, and private"
+      },
+      "goals": {
+        "title": "Goal Tracking",
+        "description": "Set your targets and track your progress day by day"
+      }
+    },
+    "cta": {
+      "getStarted": "Get Started",
+      "learnMore": "Learn More",
+      "login": "Login"
+    },
+    "footer": {
+      "builtWith": "Built with 💚 using Vue & Supabase",
+      "dataFrom": "Data from"
+    }
+  },
+  "auth": {
+    "signIn": "Sign In",
+    "signUp": "Sign Up",
+    "email": "Email",
+    "password": "Password",
+    "confirmPassword": "Confirm Password",
+    "signInButton": "Sign In",
+    "signUpButton": "Sign Up",
+    "switchToSignUp": "Don't have an account? Sign up",
+    "switchToSignIn": "Already have an account? Sign in",
+    "successMessage": "✅ Account created! Please check your email to confirm your account.",
+    "goToLogin": "Go to Login",
+    "whyNutriTrack": "Why NutriTrack?",
+    "features": {
+      "search": "Search 3M+ foods from Open Food Facts",
+      "track": "Track calories, macros, and micronutrients",
+      "mobile": "Works on web and mobile (Android)",
+      "secure": "Your data is private and secure"
+    },
+    "errors": {
+      "passwordMismatch": "Passwords don't match",
+      "invalidEmail": "Invalid email address",
+      "weakPassword": "Password must be at least 6 characters"
+    }
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "today": "Today",
+    "prevDay": "Prev",
+    "nextDay": "Next",
+    "goToToday": "Go to Today",
+    "loadingDay": "Loading your day...",
+    "todaysNutrition": "Today's Nutrition",
+    "selectDate": "Select Date",
+    "noItems": "No foods logged yet for this day.",
+    "addFoodHint": "Click \"Add Food\" to get started!",
+    "addFood": "+ Add Food",
+    "loggedFoods": "Logged Foods",
+    "loadingItems": "Loading items...",
+    "totals": {
+      "calories": "Calories",
+      "protein": "Protein",
+      "carbs": "Carbs",
+      "fat": "Fat",
+      "fiber": "Fiber",
+      "sugar": "Sugar",
+      "sodium": "Sodium"
+    },
+    "showDetails": "Show Details",
+    "hideDetails": "Hide Details",
+    "foodLog": "Food Log",
+    "delete": "Delete",
+    "confirmDelete": "Delete {item}?",
+    "editServing": {
+      "title": "Edit Serving Size",
+      "label": "Serving size (grams):",
+      "save": "Save",
+      "cancel": "Cancel",
+      "updateError": "Failed to update: ",
+      "deleteError": "Failed to delete: "
+    }
+  },
+  "search": {
+    "title": "Search Food",
+    "searchPlaceholder": "Search for food (e.g., 'almond milk')",
+    "barcodePlaceholder": "Or enter barcode",
+    "scanBarcode": "Scan Barcode",
+    "lookup": "Lookup",
+    "clear": "Clear",
+    "scanning": "Scanning...",
+    "results": "Results",
+    "of": "of",
+    "cache": {
+      "hits": "hits",
+      "misses": "misses",
+      "hitRate": "hit rate"
+    },
+    "loading": "Searching...",
+    "loadingMore": "Loading more products...",
+    "endOfResults": "You've reached the end of the results",
+    "product": {
+      "brand": "Unknown brand",
+      "barcode": "Barcode",
+      "serving": "Serving",
+      "categories": "Categories",
+      "nutriScore": "Nutri-Score",
+      "novaGroup": "NOVA Group",
+      "processingLevel": "processing level"
+    },
+    "nutrients": {
+      "energy": "Energy",
+      "protein": "Protein",
+      "carbohydrates": "Carbohydrates",
+      "fat": "Fat",
+      "fiber": "Fiber",
+      "sugars": "Sugars"
+    },
+    "calculator": {
+      "title": "Calculate Nutrients",
+      "servingSize": "Serving size (grams)",
+      "nutrientsFor": "Nutrients for"
+    },
+    "addButton": "Add {grams}g to Today",
+    "attribution": "Data from",
+    "scanner": {
+      "title": "Scan Barcode",
+      "instructions": "Position barcode within the frame",
+      "formats": "Supports EAN-13, UPC, Code-128, QR codes, and more",
+      "or": "OR",
+      "manualEntry": "Enter barcode manually",
+      "notSupported": "Barcode scanning is not supported in this browser. Please use the manual entry option or try Chrome/Edge on Android."
+    },
+    "errors": {
+      "productNotFound": "Product not found. The barcode might not be in the database.",
+      "cameraPermission": "Camera permission denied. Please allow camera access and try again.",
+      "cameraFailed": "Failed to start camera"
+    },
+    "success": {
+      "added": "Added {grams}g of {name} to {date}!"
+    }
+  },
+  "language": {
+    "switch": "Language",
+    "en": "English",
+    "de": "Deutsch"
+  },
+  "errors": {
+    "loginRequired": "Please log in to add foods to your diary",
+    "addFailed": "Failed to add food"
+  }
+}
+

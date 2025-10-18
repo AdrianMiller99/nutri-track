@@ -7,7 +7,7 @@
     </div>
 
     <div class="search-content">
-    <h1>Search Food</h1>
+    <h1>{{ $t('search.title') }}</h1>
     
     <!-- Search Input -->
     <div class="search-box">
@@ -16,10 +16,10 @@
           v-model="query"
           @input="handleSearch"
           type="text"
-          placeholder="Search for food (e.g., 'almond milk')"
+          :placeholder="$t('search.searchPlaceholder')"
           class="search-input"
         />
-        <button v-if="query" @click="clearSearch" class="clear-icon-btn" title="Clear search">
+        <button v-if="query" @click="clearSearch" class="clear-icon-btn" :title="$t('search.clear')">
           <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <line x1="18" y1="6" x2="6" y2="18"></line>
             <line x1="6" y1="6" x2="18" y2="18"></line>
@@ -40,7 +40,7 @@
           <line x1="14" y1="8" x2="14" y2="16"></line>
           <line x1="7" y1="12" x2="17" y2="12"></line>
         </svg>
-        {{ scanning ? 'Scanning...' : 'Scan Barcode' }}
+        {{ scanning ? $t('search.scanning') : $t('search.scanBarcode') }}
       </button>
     </div>
     <div v-else class="barcode-box desktop">
@@ -48,7 +48,7 @@
         <input
           v-model="barcode"
           type="text"
-          placeholder="Or enter barcode"
+          :placeholder="$t('search.barcodePlaceholder')"
           class="barcode-input"
           @keyup.enter="lookupBarcode"
         />
@@ -59,21 +59,21 @@
           </svg>
         </button>
       </div>
-      <button @click="lookupBarcode" :disabled="!barcode">Lookup</button>
+      <button @click="lookupBarcode" :disabled="!barcode">{{ $t('search.lookup') }}</button>
     </div>
 
     <!-- Cache Stats -->
     <div class="cache-stats">
       <small>
-        Cache: {{ foodStore.cacheStats.hits }} hits, 
-        {{ foodStore.cacheStats.misses }} misses 
-        ({{ foodStore.cacheStats.hitRate }} hit rate)
+        Cache: {{ foodStore.cacheStats.hits }} {{ $t('search.cache.hits') }}, 
+        {{ foodStore.cacheStats.misses }} {{ $t('search.cache.misses') }} 
+        ({{ foodStore.cacheStats.hitRate }} {{ $t('search.cache.hitRate') }})
       </small>
     </div>
 
     <!-- Loading State -->
     <div v-if="foodStore.searchLoading || foodStore.productLoading" class="loading">
-      Searching...
+      {{ $t('search.loading') }}
     </div>
 
     <!-- Error State -->
@@ -84,9 +84,9 @@
     <!-- Search Results -->
     <div v-if="foodStore.hasSearchResults" class="results">
       <h2>
-        Results 
+        {{ $t('search.results') }}
         <span v-if="foodStore.searchTotalCount > 0">
-          ({{ foodStore.searchResults.length }} of {{ foodStore.searchTotalCount }})
+          ({{ foodStore.searchResults.length }} {{ $t('search.of') }} {{ foodStore.searchTotalCount }})
         </span>
         <span v-else>
           ({{ foodStore.searchResults.length }})
@@ -107,7 +107,7 @@
           />
           <div class="product-info">
             <h3>{{ product.name }}</h3>
-            <p class="brand">{{ product.brand || 'Unknown brand' }}</p>
+            <p class="brand">{{ product.brand || $t('search.product.brand') }}</p>
             <div class="nutrients">
               <span>{{ product.nutriments.energy_kcal }} kcal</span>
               <span>P: {{ product.nutriments.proteins }}g</span>
@@ -115,7 +115,7 @@
               <span>F: {{ product.nutriments.fat }}g</span>
             </div>
             <p class="serving-info" v-if="product.serving_size">
-              Serving: {{ product.serving_size }}
+              {{ $t('search.product.serving') }}: {{ product.serving_size }}
             </p>
           </div>
         </div>
@@ -124,12 +124,12 @@
       <!-- Loading More Indicator -->
       <div v-if="foodStore.searchLoadingMore" class="loading-more">
         <div class="spinner"></div>
-        <p>Loading more products...</p>
+        <p>{{ $t('search.loadingMore') }}</p>
       </div>
 
       <!-- End of Results -->
       <div v-else-if="!foodStore.searchHasMore" class="end-of-results">
-        <p>✓ You've reached the end of the results</p>
+        <p>✓ {{ $t('search.endOfResults') }}</p>
       </div>
 
       <!-- Scroll Trigger (invisible element to detect when near bottom) -->
@@ -140,7 +140,7 @@
     <div v-if="showBrowserScanner" class="scanner-modal">
       <div class="scanner-container">
         <div class="scanner-header">
-          <h2>Scan Barcode</h2>
+          <h2>{{ $t('search.scanner.title') }}</h2>
           <button @click="stopBrowserScanner" class="scanner-close-btn">×</button>
         </div>
         
@@ -152,23 +152,23 @@
         </div>
         
         <p class="scanner-instructions">
-          📷 Position barcode within the frame<br>
-          <small>Supports EAN-13, UPC, Code-128, QR codes, and more</small>
+          📷 {{ $t('search.scanner.instructions') }}<br>
+          <small>{{ $t('search.scanner.formats') }}</small>
         </p>
         
         <!-- Manual entry fallback -->
         <div class="scanner-manual">
-          <p class="scanner-or">OR</p>
+          <p class="scanner-or">{{ $t('search.scanner.or') }}</p>
           <div class="scanner-input-group">
             <input
               v-model="manualBarcode"
               type="text"
-              placeholder="Enter barcode manually"
+              :placeholder="$t('search.scanner.manualEntry')"
               class="scanner-manual-input"
               @keyup.enter="handleManualBarcode"
             />
             <button @click="handleManualBarcode" :disabled="!manualBarcode" class="scanner-manual-btn">
-              Lookup
+              {{ $t('search.lookup') }}
             </button>
           </div>
         </div>
@@ -199,12 +199,12 @@
           
           <h2>{{ selectedProduct.name }}</h2>
           <p class="brand">{{ selectedProduct.brand }}</p>
-          <p class="barcode">Barcode: {{ selectedProduct.code }}</p>
+          <p class="barcode">{{ $t('search.product.barcode') }}: {{ selectedProduct.code }}</p>
 
           <div class="serving-calculator">
-            <h3>Calculate Nutrients</h3>
+            <h3>{{ $t('search.calculator.title') }}</h3>
             <label>
-              Serving size (grams):
+              {{ $t('search.calculator.servingSize') }}:
               <input
                 v-model.number="servingGrams"
                 type="number"
@@ -214,31 +214,31 @@
             </label>
 
             <div class="calculated-nutrients">
-              <h4>Nutrients for {{ servingGrams }}g:</h4>
+              <h4>{{ $t('search.calculator.nutrientsFor') }} {{ servingGrams }}g:</h4>
               <table>
                 <tbody>
                   <tr>
-                    <td>Energy</td>
+                    <td>{{ $t('search.nutrients.energy') }}</td>
                     <td>{{ calculatedNutrients.energy_kcal }} kcal</td>
                   </tr>
                   <tr>
-                    <td>Protein</td>
+                    <td>{{ $t('search.nutrients.protein') }}</td>
                     <td>{{ calculatedNutrients.proteins }} g</td>
                   </tr>
                   <tr>
-                    <td>Carbohydrates</td>
+                    <td>{{ $t('search.nutrients.carbohydrates') }}</td>
                     <td>{{ calculatedNutrients.carbohydrates }} g</td>
                   </tr>
                   <tr>
-                    <td>Fat</td>
+                    <td>{{ $t('search.nutrients.fat') }}</td>
                     <td>{{ calculatedNutrients.fat }} g</td>
                   </tr>
                   <tr>
-                    <td>Fiber</td>
+                    <td>{{ $t('search.nutrients.fiber') }}</td>
                     <td>{{ calculatedNutrients.fiber }} g</td>
                   </tr>
                   <tr>
-                    <td>Sugars</td>
+                    <td>{{ $t('search.nutrients.sugars') }}</td>
                     <td>{{ calculatedNutrients.sugars }} g</td>
                   </tr>
                 </tbody>
@@ -248,22 +248,22 @@
 
           <div class="product-meta">
             <p v-if="selectedProduct.categories">
-              <strong>Categories:</strong> {{ selectedProduct.categories }}
+              <strong>{{ $t('search.product.categories') }}:</strong> {{ selectedProduct.categories }}
             </p>
             <p v-if="selectedProduct.nutriscore_grade">
-              <strong>Nutri-Score:</strong> {{ selectedProduct.nutriscore_grade.toUpperCase() }}
+              <strong>{{ $t('search.product.nutriScore') }}:</strong> {{ selectedProduct.nutriscore_grade.toUpperCase() }}
             </p>
             <p v-if="selectedProduct.nova_group">
-              <strong>NOVA Group:</strong> {{ selectedProduct.nova_group }} (processing level)
+              <strong>{{ $t('search.product.novaGroup') }}:</strong> {{ selectedProduct.nova_group }} ({{ $t('search.product.processingLevel') }})
             </p>
           </div>
 
           <button class="add-btn" @click="addToLog">
-            Add {{ servingGrams }}g to Today
+            {{ $t('search.addButton', { grams: servingGrams }) }}
           </button>
 
           <p class="attribution">
-            Data from <a href="https://openfoodfacts.org" target="_blank">Open Food Facts</a>
+            {{ $t('search.attribution') }} <a href="https://openfoodfacts.org" target="_blank">Open Food Facts</a>
           </p>
         </div>
       </div>

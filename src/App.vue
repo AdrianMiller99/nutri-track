@@ -1,11 +1,16 @@
 <script setup>
-import { onMounted } from 'vue'
+import { onMounted, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 
 const router = useRouter()
 const route = useRoute()
 const authStore = useAuthStore()
+const { locale } = useI18n()
+
+const availableLocales = ['en', 'de']
+const currentLocale = computed(() => route.params.locale || 'en')
 
 onMounted(async () => {
   // Initialize auth state
@@ -14,31 +19,48 @@ onMounted(async () => {
 
 async function logout() {
   await authStore.signOut()
-  router.push('/auth')
+  router.push(`/${currentLocale.value}/auth`)
+}
+
+function switchLocale(newLocale) {
+  // Replace current locale in URL with new locale
+  const currentPath = route.path
+  const newPath = currentPath.replace(`/${currentLocale.value}`, `/${newLocale}`)
+  router.push(newPath)
 }
 </script>
 
 <template>
   <div id="app">
     <!-- Navigation Bar (only show when logged in and not on landing/auth) -->
-    <nav v-if="authStore.user && route.path !== '/' && route.path !== '/auth'" class="navbar">
+    <nav v-if="authStore.user && !route.path.endsWith('/') && !route.path.endsWith('/auth')" class="navbar">
       <div class="nav-container">
-        <router-link to="/" class="logo-link">
-          <h1 class="logo">🍎 NutriTrack</h1>
+        <router-link :to="`/${currentLocale}`" class="logo-link">
+          <h1 class="logo">🍎 {{ $t('app.name') }}</h1>
         </router-link>
         
         <div class="nav-links">
-          <router-link to="/app/dashboard" class="nav-link">
-            📊 Dashboard
+          <router-link :to="`/${currentLocale}/app/dashboard`" class="nav-link">
+            📊 {{ $t('nav.dashboard') }}
           </router-link>
-          <router-link to="/app/search" class="nav-link">
-            🔍 Search
+          <router-link :to="`/${currentLocale}/app/search`" class="nav-link">
+            🔍 {{ $t('nav.search') }}
           </router-link>
         </div>
 
         <div class="nav-actions">
+          <div class="language-switcher">
+            <button 
+              v-for="locale in availableLocales" 
+              :key="locale"
+              @click="switchLocale(locale)"
+              :class="['locale-btn', { active: currentLocale === locale }]"
+            >
+              {{ locale.toUpperCase() }}
+            </button>
+          </div>
           <span class="user-email">{{ authStore.user.email }}</span>
-          <button @click="logout" class="logout-btn">Logout</button>
+          <button @click="logout" class="logout-btn">{{ $t('nav.logout') }}</button>
         </div>
       </div>
     </nav>
@@ -137,6 +159,36 @@ body {
   display: flex;
   align-items: center;
   gap: 1rem;
+}
+
+.language-switcher {
+  display: flex;
+  gap: 0.25rem;
+  background: rgba(255, 255, 255, 0.05);
+  padding: 0.25rem;
+  border-radius: 6px;
+}
+
+.locale-btn {
+  padding: 0.25rem 0.5rem;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.6);
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.75rem;
+  font-weight: 600;
+  transition: all 0.2s;
+}
+
+.locale-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.locale-btn.active {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
 }
 
 .user-email {

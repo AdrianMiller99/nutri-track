@@ -18,23 +18,22 @@ const router = useRouter()
         <!-- Glass Card -->
         <div class="glass-card">
           <div class="logo">🍎</div>
-          <h1 class="title">NutriTrack</h1>
+          <h1 class="title">{{ $t('app.name') }}</h1>
           <p class="subtitle">
-            Track your nutrition journey with elegance
+            {{ $t('home.subtitle') }}
           </p>
           <p class="description">
-            Simple, powerful, and beautiful nutrition tracking. 
-            Search from millions of foods, track your macros, and reach your goals.
+            {{ $t('home.description') }}
           </p>
 
           <!-- CTA Buttons -->
           <div class="cta-buttons">
-            <button @click="router.push('/auth')" class="btn-primary">
-              Get Started
+            <button @click="router.push(`/${$route.params.locale || 'en'}/auth`)" class="btn-primary">
+              {{ $t('home.cta.getStarted') }}
               <span class="arrow">→</span>
             </button>
             <button @click="scrollToFeatures" class="btn-secondary">
-              Learn More
+              {{ $t('home.cta.learnMore') }}
             </button>
           </div>
 
@@ -42,15 +41,15 @@ const router = useRouter()
           <div class="stats">
             <div class="stat">
               <div class="stat-number">3M+</div>
-              <div class="stat-label">Foods</div>
+              <div class="stat-label">{{ $t('home.stats.foods') }}</div>
             </div>
             <div class="stat">
-              <div class="stat-number">Free</div>
-              <div class="stat-label">Forever</div>
+              <div class="stat-number">{{ $t('home.stats.freeLabel') }}</div>
+              <div class="stat-label">{{ $t('home.stats.forever') }}</div>
             </div>
             <div class="stat">
-              <div class="stat-number">Private</div>
-              <div class="stat-label">& Secure</div>
+              <div class="stat-number">{{ $t('home.stats.privateLabel') }}</div>
+              <div class="stat-label">{{ $t('home.stats.secure') }}</div>
             </div>
           </div>
         </div>
@@ -60,43 +59,43 @@ const router = useRouter()
     <!-- Features Section -->
     <section id="features" class="features">
       <div class="container">
-        <h2 class="section-title">Everything you need</h2>
+        <h2 class="section-title">{{ $t('home.featuresTitle') }}</h2>
         
         <div class="features-grid">
           <div class="feature-card">
             <div class="feature-icon">🔍</div>
-            <h3>Smart Search</h3>
-            <p>Search from 3 million+ products from Open Food Facts database</p>
+            <h3>{{ $t('home.features.search.title') }}</h3>
+            <p>{{ $t('home.features.search.description') }}</p>
           </div>
 
           <div class="feature-card">
             <div class="feature-icon">📊</div>
-            <h3>Track Everything</h3>
-            <p>Monitor calories, macros, and micronutrients with detailed insights</p>
+            <h3>{{ $t('home.features.track.title') }}</h3>
+            <p>{{ $t('home.features.track.description') }}</p>
           </div>
 
           <div class="feature-card">
             <div class="feature-icon">⚡</div>
-            <h3>Lightning Fast</h3>
-            <p>Smart caching for instant searches and offline functionality</p>
+            <h3>{{ $t('home.features.fast.title') }}</h3>
+            <p>{{ $t('home.features.fast.description') }}</p>
           </div>
 
           <div class="feature-card">
             <div class="feature-icon">📱</div>
-            <h3>Multi-Platform</h3>
-            <p>Works seamlessly on web and mobile (Android coming soon)</p>
+            <h3>{{ $t('home.features.multiPlatform.title') }}</h3>
+            <p>{{ $t('home.features.multiPlatform.description') }}</p>
           </div>
 
           <div class="feature-card">
             <div class="feature-icon">🔒</div>
-            <h3>Privacy First</h3>
-            <p>Your data belongs to you. Secure, encrypted, and private</p>
+            <h3>{{ $t('home.features.privacy.title') }}</h3>
+            <p>{{ $t('home.features.privacy.description') }}</p>
           </div>
 
           <div class="feature-card">
             <div class="feature-icon">🎯</div>
-            <h3>Goal Tracking</h3>
-            <p>Set your targets and track your progress day by day</p>
+            <h3>{{ $t('home.features.goals.title') }}</h3>
+            <p>{{ $t('home.features.goals.description') }}</p>
           </div>
         </div>
       </div>
@@ -106,10 +105,10 @@ const router = useRouter()
     <footer class="footer">
       <div class="container">
         <p class="footer-text">
-          Built with 💚 using Vue & Supabase
+          {{ $t('home.footer.builtWith') }}
         </p>
         <p class="footer-text">
-          Data from <a href="https://openfoodfacts.org" target="_blank">Open Food Facts</a>
+          {{ $t('home.footer.dataFrom') }} <a href="https://openfoodfacts.org" target="_blank">Open Food Facts</a>
         </p>
       </div>
     </footer>

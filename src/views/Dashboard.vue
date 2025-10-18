@@ -10,96 +10,96 @@
       <!-- Header with Day Switcher -->
       <div class="day-switcher glass-card">
         <button @click="dayStore.previousDay()" class="nav-btn">
-          ← Prev
+          ← {{ $t('dashboard.prevDay') }}
         </button>
         
         <div class="date-display">
           <h2>{{ dayStore.displayDate }}</h2>
           <button v-if="!dayStore.isToday" @click="dayStore.goToToday()" class="today-btn">
-            Go to Today
+            {{ $t('dashboard.goToToday') }}
           </button>
         </div>
         
         <button @click="dayStore.nextDay()" class="nav-btn">
-          Next →
+          {{ $t('dashboard.nextDay') }} →
         </button>
       </div>
 
       <!-- Loading State -->
       <div v-if="dayStore.loading" class="loading-state glass-card">
-        <p>Loading your day...</p>
+        <p>{{ $t('dashboard.loadingDay') }}</p>
       </div>
 
       <!-- Main Content -->
       <div v-else class="content">
         <!-- Nutrition Totals -->
         <div class="totals-section glass-card">
-          <h3>Today's Nutrition</h3>
+          <h3>{{ $t('dashboard.todaysNutrition') }}</h3>
           
           <div class="macro-cards">
             <div class="macro-card calories">
               <div class="macro-value">{{ Math.round(dayStore.totals.kcal) }}</div>
-              <div class="macro-label">Calories</div>
+              <div class="macro-label">{{ $t('dashboard.totals.calories') }}</div>
             </div>
             
             <div class="macro-card protein">
               <div class="macro-value">{{ dayStore.totals.protein_g }}g</div>
-              <div class="macro-label">Protein</div>
+              <div class="macro-label">{{ $t('dashboard.totals.protein') }}</div>
             </div>
             
             <div class="macro-card carbs">
               <div class="macro-value">{{ dayStore.totals.carb_g }}g</div>
-              <div class="macro-label">Carbs</div>
+              <div class="macro-label">{{ $t('dashboard.totals.carbs') }}</div>
             </div>
             
             <div class="macro-card fat">
               <div class="macro-value">{{ dayStore.totals.fat_g }}g</div>
-              <div class="macro-label">Fat</div>
+              <div class="macro-label">{{ $t('dashboard.totals.fat') }}</div>
             </div>
           </div>
 
           <!-- Additional Nutrients (Collapsible) -->
           <div class="additional-nutrients" v-if="showAdditional">
             <div class="nutrient-row">
-              <span>Fiber</span>
+              <span>{{ $t('dashboard.totals.fiber') }}</span>
               <span>{{ dayStore.totals.fiber_g }}g</span>
             </div>
             <div class="nutrient-row">
-              <span>Sugar</span>
+              <span>{{ $t('dashboard.totals.sugar') }}</span>
               <span>{{ dayStore.totals.sugar_g }}g</span>
             </div>
             <div class="nutrient-row">
-              <span>Sodium</span>
+              <span>{{ $t('dashboard.totals.sodium') }}</span>
               <span>{{ Math.round(dayStore.totals.sodium_mg) }}mg</span>
             </div>
           </div>
           
           <button @click="showAdditional = !showAdditional" class="toggle-additional">
-            {{ showAdditional ? 'Hide' : 'Show' }} Details
+            {{ showAdditional ? $t('dashboard.hideDetails') : $t('dashboard.showDetails') }}
           </button>
         </div>
 
         <!-- Add Food Button -->
         <div class="action-section">
           <button @click="goToSearch" class="add-food-btn">
-            + Add Food
+            {{ $t('dashboard.addFood') }}
           </button>
         </div>
 
         <!-- Logged Items -->
         <div class="items-section glass-card">
           <h3>
-            Logged Foods
+            {{ $t('dashboard.loggedFoods') }}
             <span class="item-count">({{ dayStore.itemCount }})</span>
           </h3>
 
           <div v-if="dayStore.itemsLoading" class="loading-items">
-            Loading items...
+            {{ $t('dashboard.loadingItems') }}
           </div>
 
           <div v-else-if="!dayStore.hasItems" class="empty-state">
-            <p>No foods logged yet for this day.</p>
-            <p class="hint">Click "Add Food" to get started!</p>
+            <p>{{ $t('dashboard.noItems') }}</p>
+            <p class="hint">{{ $t('dashboard.addFoodHint') }}</p>
           </div>
 
           <div v-else class="items-list">
@@ -162,11 +162,11 @@
       <!-- Edit Modal -->
       <div v-if="editingItem" class="modal" @click="closeEdit">
         <div class="modal-content glass-card" @click.stop>
-          <h3>Edit Serving Size</h3>
+          <h3>{{ $t('dashboard.editServing.title') }}</h3>
           <p class="modal-product">{{ editingItem.label }}</p>
           
           <label>
-            Serving size (grams):
+            {{ $t('dashboard.editServing.label') }}
             <input
               v-model.number="editServingGrams"
               type="number"
@@ -176,8 +176,8 @@
           </label>
 
           <div class="modal-actions">
-            <button @click="saveEdit" class="save-btn">Save</button>
-            <button @click="closeEdit" class="cancel-btn">Cancel</button>
+            <button @click="saveEdit" class="save-btn">{{ $t('dashboard.editServing.save') }}</button>
+            <button @click="closeEdit" class="cancel-btn">{{ $t('dashboard.editServing.cancel') }}</button>
           </div>
         </div>
       </div>
@@ -186,14 +186,19 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, onMounted, computed } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { useDayStore } from '@/stores/day'
 import { useAuthStore } from '@/stores/auth'
 
 const router = useRouter()
+const route = useRoute()
+const { t } = useI18n()
 const dayStore = useDayStore()
 const authStore = useAuthStore()
+
+const currentLocale = computed(() => route.params.locale || 'en')
 
 const showAdditional = ref(false)
 const editingItem = ref(null)
@@ -202,7 +207,7 @@ const editServingGrams = ref(0)
 onMounted(async () => {
   // Redirect if not logged in
   if (!authStore.user) {
-    router.push('/auth')
+    router.push(`/${currentLocale.value}/auth`)
     return
   }
 
@@ -211,7 +216,7 @@ onMounted(async () => {
 })
 
 function goToSearch() {
-  router.push('/app/search')
+  router.push(`/${currentLocale.value}/app/search`)
 }
 
 function editItem(item) {
@@ -231,17 +236,18 @@ async function saveEdit() {
     await dayStore.updateItemServing(editingItem.value.id, editServingGrams.value)
     closeEdit()
   } catch (error) {
-    alert('Failed to update: ' + error.message)
+    alert(t('dashboard.editServing.updateError') + error.message)
   }
 }
 
 async function confirmDelete(item) {
-  if (!confirm(`Delete ${item.label}?`)) return
+  const message = t('dashboard.confirmDelete', { item: item.label })
+  if (!confirm(message)) return
 
   try {
     await dayStore.deleteItem(item.id)
   } catch (error) {
-    alert('Failed to delete: ' + error.message)
+    alert(t('dashboard.editServing.deleteError') + error.message)
   }
 }
 </script>

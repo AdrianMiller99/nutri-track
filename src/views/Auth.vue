@@ -2,8 +2,8 @@
   <div class="auth-page">
     <div class="auth-container">
       <div class="auth-header">
-        <h1>🍎 NutriTrack</h1>
-        <p class="tagline">Track your nutrition, reach your goals</p>
+        <h1>🍎 {{ $t('app.name') }}</h1>
+        <p class="tagline">{{ $t('app.tagline') }}</p>
       </div>
 
       <div class="auth-card">
@@ -13,22 +13,22 @@
             :class="{ active: mode === 'login' }"
             @click="mode = 'login'"
           >
-            Login
+            {{ $t('auth.signIn') }}
           </button>
           <button 
             :class="{ active: mode === 'signup' }"
             @click="mode = 'signup'"
           >
-            Sign Up
+            {{ $t('auth.signUp') }}
           </button>
         </div>
 
         <!-- Login Form -->
         <form v-if="mode === 'login'" @submit.prevent="handleLogin" class="auth-form">
-          <h2>Welcome Back!</h2>
+          <h2>{{ $t('auth.signIn') }}</h2>
           
           <div class="form-group">
-            <label for="login-email">Email</label>
+            <label for="login-email">{{ $t('auth.email') }}</label>
             <input
               id="login-email"
               v-model="loginEmail"
@@ -40,7 +40,7 @@
           </div>
 
           <div class="form-group">
-            <label for="login-password">Password</label>
+            <label for="login-password">{{ $t('auth.password') }}</label>
             <input
               id="login-password"
               v-model="loginPassword"
@@ -53,21 +53,20 @@
           </div>
 
           <button type="submit" class="submit-btn" :disabled="loading">
-            {{ loading ? 'Logging in...' : 'Login' }}
+            {{ $t('auth.signInButton') }}
           </button>
 
           <p class="toggle-text">
-            Don't have an account? 
-            <a @click="mode = 'signup'">Sign up</a>
+            <a @click="mode = 'signup'">{{ $t('auth.switchToSignUp') }}</a>
           </p>
         </form>
 
         <!-- Signup Form -->
         <form v-if="mode === 'signup'" @submit.prevent="handleSignup" class="auth-form">
-          <h2>Create Account</h2>
+          <h2>{{ $t('auth.signUp') }}</h2>
           
           <div class="form-group">
-            <label for="signup-email">Email</label>
+            <label for="signup-email">{{ $t('auth.email') }}</label>
             <input
               id="signup-email"
               v-model="signupEmail"
@@ -79,7 +78,7 @@
           </div>
 
           <div class="form-group">
-            <label for="signup-password">Password</label>
+            <label for="signup-password">{{ $t('auth.password') }}</label>
             <input
               id="signup-password"
               v-model="signupPassword"
@@ -89,11 +88,11 @@
               autocomplete="new-password"
               minlength="6"
             />
-            <small class="hint">At least 6 characters</small>
+            <small class="hint">{{ $t('auth.errors.weakPassword') }}</small>
           </div>
 
           <div class="form-group">
-            <label for="signup-password-confirm">Confirm Password</label>
+            <label for="signup-password-confirm">{{ $t('auth.confirmPassword') }}</label>
             <input
               id="signup-password-confirm"
               v-model="signupPasswordConfirm"
@@ -106,12 +105,11 @@
           </div>
 
           <button type="submit" class="submit-btn" :disabled="loading">
-            {{ loading ? 'Creating account...' : 'Sign Up' }}
+            {{ $t('auth.signUpButton') }}
           </button>
 
           <p class="toggle-text">
-            Already have an account? 
-            <a @click="mode = 'login'">Login</a>
+            <a @click="mode = 'login'">{{ $t('auth.switchToSignIn') }}</a>
           </p>
         </form>
 
@@ -122,30 +120,30 @@
 
         <!-- Success Message for Signup -->
         <div v-if="signupSuccess" class="success-message">
-          ✅ Account created! Please check your email to confirm your account.
-          <button @click="signupSuccess = false; mode = 'login'">Go to Login</button>
+          {{ $t('auth.successMessage') }}
+          <button @click="signupSuccess = false; mode = 'login'">{{ $t('auth.goToLogin') }}</button>
         </div>
       </div>
 
       <!-- Info Section -->
       <div class="info-section">
-        <h3>Why NutriTrack?</h3>
+        <h3>{{ $t('auth.whyNutriTrack') }}</h3>
         <div class="features">
           <div class="feature">
             <span class="icon">🔍</span>
-            <p>Search 3M+ foods from Open Food Facts</p>
+            <p>{{ $t('auth.features.search') }}</p>
           </div>
           <div class="feature">
             <span class="icon">📊</span>
-            <p>Track calories, macros, and micronutrients</p>
+            <p>{{ $t('auth.features.track') }}</p>
           </div>
           <div class="feature">
             <span class="icon">📱</span>
-            <p>Works on web and mobile (Android)</p>
+            <p>{{ $t('auth.features.mobile') }}</p>
           </div>
           <div class="feature">
             <span class="icon">🔒</span>
-            <p>Your data is private and secure</p>
+            <p>{{ $t('auth.features.secure') }}</p>
           </div>
         </div>
       </div>
@@ -185,7 +183,8 @@ async function handleLogin() {
     
     if (!error) {
       // Success! Router will redirect to dashboard
-      router.push('/app/dashboard')
+      const locale = router.currentRoute.value.params.locale || 'en'
+      router.push(`/${locale}/app/dashboard`)
     }
   } catch (error) {
     console.error('Login error:', error)
@@ -199,13 +198,13 @@ async function handleSignup() {
 
   // Validate passwords match
   if (signupPassword.value !== signupPasswordConfirm.value) {
-    authStore.error = 'Passwords do not match'
+    authStore.error = 'Passwords do not match' // TODO: translate this
     return
   }
 
   // Validate password length
   if (signupPassword.value.length < 6) {
-    authStore.error = 'Password must be at least 6 characters'
+    authStore.error = 'Password must be at least 6 characters' // TODO: translate this
     return
   }
 

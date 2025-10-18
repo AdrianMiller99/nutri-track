@@ -1,0 +1,190 @@
+{
+  "app": {
+    "name": "NutriTrack",
+    "tagline": "Verfolge deine Ernährung, Verändere dein Leben"
+  },
+  "nav": {
+    "dashboard": "Dashboard",
+    "search": "Suchen",
+    "logout": "Abmelden"
+  },
+  "home": {
+    "title": "Willkommen bei NutriTrack",
+    "subtitle": "Verfolge deine Ernährungsreise mit Eleganz",
+    "description": "Einfaches, leistungsstarkes und schönes Ernährungstracking. Durchsuche Millionen von Lebensmitteln, verfolge deine Makros und erreiche deine Ziele.",
+    "featuresTitle": "Alles was du brauchst",
+    "stats": {
+      "foods": "Lebensmittel",
+      "freeLabel": "Kostenlos",
+      "forever": "Für immer",
+      "privateLabel": "Privat",
+      "secure": "& Sicher"
+    },
+    "features": {
+      "search": {
+        "title": "Intelligente Suche",
+        "description": "Durchsuche 3+ Millionen Produkte aus der Open Food Facts Datenbank"
+      },
+      "track": {
+        "title": "Alles verfolgen",
+        "description": "Überwache Kalorien, Makros und Mikronährstoffe mit detaillierten Einblicken"
+      },
+      "fast": {
+        "title": "Blitzschnell",
+        "description": "Intelligentes Caching für sofortige Suchen und Offline-Funktionalität"
+      },
+      "multiPlatform": {
+        "title": "Multiplattform",
+        "description": "Funktioniert nahtlos auf Web und Mobilgeräten (Android kommt bald)"
+      },
+      "privacy": {
+        "title": "Datenschutz zuerst",
+        "description": "Deine Daten gehören dir. Sicher, verschlüsselt und privat"
+      },
+      "goals": {
+        "title": "Ziel-Tracking",
+        "description": "Setze deine Ziele und verfolge deinen Fortschritt Tag für Tag"
+      }
+    },
+    "cta": {
+      "getStarted": "Jetzt starten",
+      "learnMore": "Mehr erfahren",
+      "login": "Anmelden"
+    },
+    "footer": {
+      "builtWith": "Gebaut mit 💚 mit Vue & Supabase",
+      "dataFrom": "Daten von"
+    }
+  },
+  "auth": {
+    "signIn": "Anmelden",
+    "signUp": "Registrieren",
+    "email": "E-Mail",
+    "password": "Passwort",
+    "confirmPassword": "Passwort bestätigen",
+    "signInButton": "Anmelden",
+    "signUpButton": "Registrieren",
+    "switchToSignUp": "Noch kein Konto? Jetzt registrieren",
+    "switchToSignIn": "Bereits ein Konto? Jetzt anmelden",
+    "successMessage": "✅ Konto erstellt! Bitte überprüfe deine E-Mail, um dein Konto zu bestätigen.",
+    "goToLogin": "Zur Anmeldung",
+    "whyNutriTrack": "Warum NutriTrack?",
+    "features": {
+      "search": "Durchsuche 3M+ Lebensmittel von Open Food Facts",
+      "track": "Verfolge Kalorien, Makronährstoffe und Mikronährstoffe",
+      "mobile": "Funktioniert auf Web und Mobilgeräten (Android)",
+      "secure": "Deine Daten sind privat und sicher"
+    },
+    "errors": {
+      "passwordMismatch": "Passwörter stimmen nicht überein",
+      "invalidEmail": "Ungültige E-Mail-Adresse",
+      "weakPassword": "Passwort muss mindestens 6 Zeichen lang sein"
+    }
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "today": "Heute",
+    "prevDay": "Zurück",
+    "nextDay": "Weiter",
+    "goToToday": "Zu Heute",
+    "loadingDay": "Lade deinen Tag...",
+    "todaysNutrition": "Heutige Ernährung",
+    "selectDate": "Datum wählen",
+    "noItems": "Noch keine Lebensmittel für diesen Tag protokolliert.",
+    "addFoodHint": "Klicke auf \"Lebensmittel hinzufügen\" um zu beginnen!",
+    "addFood": "+ Lebensmittel hinzufügen",
+    "loggedFoods": "Protokollierte Lebensmittel",
+    "loadingItems": "Lade Einträge...",
+    "totals": {
+      "calories": "Kalorien",
+      "protein": "Eiweiß",
+      "carbs": "Kohlenhydrate",
+      "fat": "Fett",
+      "fiber": "Ballaststoffe",
+      "sugar": "Zucker",
+      "sodium": "Natrium"
+    },
+    "showDetails": "Details anzeigen",
+    "hideDetails": "Details ausblenden",
+    "foodLog": "Ernährungstagebuch",
+    "delete": "Löschen",
+    "confirmDelete": "{item} löschen?",
+    "editServing": {
+      "title": "Portionsgröße bearbeiten",
+      "label": "Portionsgröße (Gramm):",
+      "save": "Speichern",
+      "cancel": "Abbrechen",
+      "updateError": "Fehler beim Aktualisieren: ",
+      "deleteError": "Fehler beim Löschen: "
+    }
+  },
+  "search": {
+    "title": "Lebensmittel suchen",
+    "searchPlaceholder": "Nach Lebensmitteln suchen (z.B. 'Mandelmilch')",
+    "barcodePlaceholder": "Oder Barcode eingeben",
+    "scanBarcode": "Barcode scannen",
+    "lookup": "Suchen",
+    "clear": "Löschen",
+    "scanning": "Wird gescannt...",
+    "results": "Ergebnisse",
+    "of": "von",
+    "cache": {
+      "hits": "Treffer",
+      "misses": "Fehltreffer",
+      "hitRate": "Trefferquote"
+    },
+    "loading": "Suche läuft...",
+    "loadingMore": "Lade weitere Produkte...",
+    "endOfResults": "Du hast das Ende der Ergebnisse erreicht",
+    "product": {
+      "brand": "Unbekannte Marke",
+      "barcode": "Barcode",
+      "serving": "Portion",
+      "categories": "Kategorien",
+      "nutriScore": "Nutri-Score",
+      "novaGroup": "NOVA-Gruppe",
+      "processingLevel": "Verarbeitungsgrad"
+    },
+    "nutrients": {
+      "energy": "Energie",
+      "protein": "Eiweiß",
+      "carbohydrates": "Kohlenhydrate",
+      "fat": "Fett",
+      "fiber": "Ballaststoffe",
+      "sugars": "Zucker"
+    },
+    "calculator": {
+      "title": "Nährstoffe berechnen",
+      "servingSize": "Portionsgröße (Gramm)",
+      "nutrientsFor": "Nährstoffe für"
+    },
+    "addButton": "{grams}g zu Heute hinzufügen",
+    "attribution": "Daten von",
+    "scanner": {
+      "title": "Barcode scannen",
+      "instructions": "Positioniere den Barcode im Rahmen",
+      "formats": "Unterstützt EAN-13, UPC, Code-128, QR-Codes und mehr",
+      "or": "ODER",
+      "manualEntry": "Barcode manuell eingeben",
+      "notSupported": "Barcode-Scannen wird in diesem Browser nicht unterstützt. Bitte verwende die manuelle Eingabe oder versuche es mit Chrome/Edge auf Android."
+    },
+    "errors": {
+      "productNotFound": "Produkt nicht gefunden. Der Barcode ist möglicherweise nicht in der Datenbank.",
+      "cameraPermission": "Kameraberechtigung verweigert. Bitte erlaube den Kamerazugriff und versuche es erneut.",
+      "cameraFailed": "Kamera konnte nicht gestartet werden"
+    },
+    "success": {
+      "added": "{grams}g von {name} zu {date} hinzugefügt!"
+    }
+  },
+  "language": {
+    "switch": "Sprache",
+    "en": "English",
+    "de": "Deutsch"
+  },
+  "errors": {
+    "loginRequired": "Bitte melde dich an, um Lebensmittel zu deinem Tagebuch hinzuzufügen",
+    "addFailed": "Lebensmittel konnte nicht hinzugefügt werden"
+  }
+}
+
