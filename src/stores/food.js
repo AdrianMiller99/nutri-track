@@ -12,6 +12,11 @@ export const useFoodStore = defineStore('food', {
     searchResults: [],
     searchLoading: false,
     searchError: null,
+    searchPage: 1,
+    searchTotalCount: 0,
+    searchPageSize: 24,
+    searchHasMore: true,
+    searchLoadingMore: false,
     
     // Product detail state
     currentProduct: null,
@@ -27,35 +32,73 @@ export const useFoodStore = defineStore('food', {
     /**
      * Search for products by text query
      * Uses cache-first strategy
+     * @param {boolean} append - If true, append results to existing ones (for infinite scroll)
      */
-    async search(query, page = 1, pageSize = 25) {
+    async search(query, page = 1, pageSize = 24, append = false) {
       if (!query || query.trim().length === 0) {
         this.searchResults = []
         this.searchQuery = ''
+        this.searchPage = 1
+        this.searchHasMore = true
         return
       }
 
-      this.searchQuery = query
-      this.searchLoading = true
-      this.searchError = null
+      // If it's a new search (not appending), reset everything
+      if (!append) {
+        this.searchQuery = query
+        this.searchLoading = true
+        this.searchError = null
+        this.searchResults = []
+        this.searchPage = 1
+        this.searchHasMore = true
+      } else {
+        this.searchLoadingMore = true
+      }
 
       try {
-        // Try to search in cache first (using full-text search)
-        const cachedResults = await this._searchCache(query, pageSize)
+        // For pagination, we need to fetch from API (cache doesn't support pagination well)
+        // Only use cache for initial search (page 1) if not appending
+        if (page === 1 && !append) {
+          const cachedResults = await this._searchCache(query, pageSize)
+          
+          if (cachedResults.length > 0) {
+            this.searchResults = cachedResults
+            this.cacheHits++
+            this.searchPage = 1
+            this.searchTotalCount = cachedResults.length
+            // We don't know if there are more in cache, so assume yes
+            this.searchHasMore = cachedResults.length >= pageSize
+            console.log(`[Cache HIT] Found ${cachedResults.length} results in cache for "${query}"`)
+            return
+          }
+        }
+
+        // Cache miss or loading more - fetch from API
+        this.cacheMisses++
+        console.log(`[Cache MISS] Fetching from API for "${query}" (page ${page})`)
         
-        if (cachedResults.length > 0) {
-          this.searchResults = cachedResults
-          this.cacheHits++
-          console.log(`[Cache HIT] Found ${cachedResults.length} results in cache for "${query}"`)
+        const apiResults = await searchProducts(query, page, pageSize)
+        
+        if (append) {
+          // Append new results to existing ones
+          this.searchResults = [...this.searchResults, ...apiResults.products]
         } else {
-          // Cache miss - fetch from API
-          this.cacheMisses++
-          console.log(`[Cache MISS] Fetching from API for "${query}"`)
-          
-          const apiResults = await searchProducts(query, page, pageSize)
+          // Replace with new results
           this.searchResults = apiResults.products
-          
-          // Cache all results in background (don't await)
+        }
+        
+        this.searchPage = apiResults.page
+        this.searchTotalCount = apiResults.count
+        this.searchPageSize = apiResults.pageSize
+        
+        // Check if there are more results
+        const totalLoaded = this.searchResults.length
+        this.searchHasMore = totalLoaded < apiResults.count
+        
+        console.log(`[Search] Loaded ${apiResults.products.length} products (total: ${totalLoaded}/${apiResults.count})`)
+        
+        // Cache all results in background (don't await)
+        if (apiResults.products.length > 0) {
           this._cacheProducts(apiResults.products).catch(err => {
             console.warn('Failed to cache search results:', err)
           })
@@ -63,10 +106,25 @@ export const useFoodStore = defineStore('food', {
       } catch (error) {
         console.error('Search error:', error)
         this.searchError = error.message
-        this.searchResults = []
+        if (!append) {
+          this.searchResults = []
+        }
       } finally {
         this.searchLoading = false
+        this.searchLoadingMore = false
       }
+    },
+
+    /**
+     * Load more search results (for infinite scroll)
+     */
+    async loadMore() {
+      if (!this.searchQuery || this.searchLoadingMore || !this.searchHasMore) {
+        return
+      }
+
+      const nextPage = this.searchPage + 1
+      await this.search(this.searchQuery, nextPage, this.searchPageSize, true)
     },
 
     /**
@@ -143,6 +201,9 @@ export const useFoodStore = defineStore('food', {
       this.searchQuery = ''
       this.searchResults = []
       this.searchError = null
+      this.searchPage = 1
+      this.searchHasMore = true
+      this.searchTotalCount = 0
     },
 
     /**

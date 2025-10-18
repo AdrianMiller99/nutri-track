@@ -13,6 +13,7 @@
     "deploy": "npm run build && node deploy.js"
   },
   "dependencies": {
+    "@capacitor-mlkit/barcode-scanning": "^7.3.0",
     "@capacitor/android": "^7.4.3",
     "@capacitor/core": "^7.4.3",
     "@supabase/supabase-js": "^2.57.2",

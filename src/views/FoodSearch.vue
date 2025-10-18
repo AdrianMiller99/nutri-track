@@ -11,24 +11,54 @@
     
     <!-- Search Input -->
     <div class="search-box">
-      <input
-        v-model="query"
-        @input="handleSearch"
-        type="text"
-        placeholder="Search for food (e.g., 'almond milk')"
-        class="search-input"
-      />
-      <button v-if="query" @click="clearSearch" class="clear-btn">Clear</button>
+      <div class="input-with-icon">
+        <input
+          v-model="query"
+          @input="handleSearch"
+          type="text"
+          placeholder="Search for food (e.g., 'almond milk')"
+          class="search-input"
+        />
+        <button v-if="query" @click="clearSearch" class="clear-icon-btn" title="Clear search">
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
     </div>
 
     <!-- Barcode Lookup -->
-    <div class="barcode-box">
-      <input
-        v-model="barcode"
-        type="text"
-        placeholder="Or enter barcode"
-        class="barcode-input"
-      />
+    <div v-if="isMobile" class="barcode-box mobile">
+      <button @click="scanBarcode" class="scan-btn" :disabled="scanning">
+        <svg v-if="!scanning" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 7V5a2 2 0 0 1 2-2h2"></path>
+          <path d="M17 3h2a2 2 0 0 1 2 2v2"></path>
+          <path d="M21 17v2a2 2 0 0 1-2 2h-2"></path>
+          <path d="M7 21H5a2 2 0 0 1-2-2v-2"></path>
+          <line x1="10" y1="8" x2="10" y2="16"></line>
+          <line x1="14" y1="8" x2="14" y2="16"></line>
+          <line x1="7" y1="12" x2="17" y2="12"></line>
+        </svg>
+        {{ scanning ? 'Scanning...' : 'Scan Barcode' }}
+      </button>
+    </div>
+    <div v-else class="barcode-box desktop">
+      <div class="input-with-icon">
+        <input
+          v-model="barcode"
+          type="text"
+          placeholder="Or enter barcode"
+          class="barcode-input"
+          @keyup.enter="lookupBarcode"
+        />
+        <button @click="scanBarcode" class="camera-icon-btn" :disabled="scanning" title="Scan barcode">
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
+            <circle cx="12" cy="13" r="4"></circle>
+          </svg>
+        </button>
+      </div>
       <button @click="lookupBarcode" :disabled="!barcode">Lookup</button>
     </div>
 
@@ -53,7 +83,7 @@
 
     <!-- Search Results -->
     <div v-if="foodStore.hasSearchResults" class="results">
-      <h2>Results ({{ foodStore.searchResults.length }})</h2>
+      <h2>Results ({{ foodStore.searchResults.length }}<span v-if="foodStore.searchTotalCount > 0"> of {{ foodStore.searchTotalCount }}</span>)</h2>
       <div class="product-grid">
         <div
           v-for="product in foodStore.searchResults"
@@ -82,11 +112,34 @@
           </div>
         </div>
       </div>
+
+      <!-- Loading More Indicator -->
+      <div v-if="foodStore.searchLoadingMore" class="loading-more">
+        <div class="spinner"></div>
+        <p>Loading more products...</p>
+      </div>
+
+      <!-- End of Results -->
+      <div v-else-if="!foodStore.searchHasMore" class="end-of-results">
+        <p>✓ You've reached the end of the results</p>
+      </div>
+
+      <!-- Scroll Trigger (invisible element to detect when near bottom) -->
+      <div ref="scrollTrigger" class="scroll-trigger"></div>
     </div>
 
     <!-- Product Detail Modal -->
-    <div v-if="selectedProduct" class="modal" @click="closeModal">
-      <div class="modal-content" @click.stop>
+    <div 
+      v-if="selectedProduct" 
+      class="modal" 
+      @click="closeModal"
+      :style="{ paddingTop: navbarHeight + 'px' }"
+    >
+      <div 
+        class="modal-content" 
+        @click.stop
+        :style="{ maxHeight: `calc(100vh - ${navbarHeight}px - 2rem)` }"
+      >
         <button class="close-btn" @click="closeModal">×</button>
         
         <div class="product-detail">
@@ -116,30 +169,32 @@
             <div class="calculated-nutrients">
               <h4>Nutrients for {{ servingGrams }}g:</h4>
               <table>
-                <tr>
-                  <td>Energy</td>
-                  <td>{{ calculatedNutrients.energy_kcal }} kcal</td>
-                </tr>
-                <tr>
-                  <td>Protein</td>
-                  <td>{{ calculatedNutrients.proteins }} g</td>
-                </tr>
-                <tr>
-                  <td>Carbohydrates</td>
-                  <td>{{ calculatedNutrients.carbohydrates }} g</td>
-                </tr>
-                <tr>
-                  <td>Fat</td>
-                  <td>{{ calculatedNutrients.fat }} g</td>
-                </tr>
-                <tr>
-                  <td>Fiber</td>
-                  <td>{{ calculatedNutrients.fiber }} g</td>
-                </tr>
-                <tr>
-                  <td>Sugars</td>
-                  <td>{{ calculatedNutrients.sugars }} g</td>
-                </tr>
+                <tbody>
+                  <tr>
+                    <td>Energy</td>
+                    <td>{{ calculatedNutrients.energy_kcal }} kcal</td>
+                  </tr>
+                  <tr>
+                    <td>Protein</td>
+                    <td>{{ calculatedNutrients.proteins }} g</td>
+                  </tr>
+                  <tr>
+                    <td>Carbohydrates</td>
+                    <td>{{ calculatedNutrients.carbohydrates }} g</td>
+                  </tr>
+                  <tr>
+                    <td>Fat</td>
+                    <td>{{ calculatedNutrients.fat }} g</td>
+                  </tr>
+                  <tr>
+                    <td>Fiber</td>
+                    <td>{{ calculatedNutrients.fiber }} g</td>
+                  </tr>
+                  <tr>
+                    <td>Sugars</td>
+                    <td>{{ calculatedNutrients.sugars }} g</td>
+                  </tr>
+                </tbody>
               </table>
             </div>
           </div>
@@ -171,11 +226,13 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { useFoodStore } from '@/stores/food'
 import { useDayStore } from '@/stores/day'
 import { useAuthStore } from '@/stores/auth'
+import { BarcodeScanner } from '@capacitor-mlkit/barcode-scanning'
+import { Capacitor } from '@capacitor/core'
 
 const router = useRouter()
 const foodStore = useFoodStore()
@@ -186,6 +243,93 @@ const query = ref('')
 const barcode = ref('')
 const selectedProduct = ref(null)
 const servingGrams = ref(100)
+const scanning = ref(false)
+const isMobile = ref(false)
+const scrollTrigger = ref(null)
+const navbarHeight = ref(0)
+
+let intersectionObserver = null
+
+// Detect if we're on a mobile platform and measure navbar height
+onMounted(() => {
+  isMobile.value = Capacitor.isNativePlatform() || window.innerWidth <= 768
+  measureNavbarHeight()
+  
+  // Update navbar height on window resize
+  window.addEventListener('resize', measureNavbarHeight)
+})
+
+onUnmounted(() => {
+  if (intersectionObserver) {
+    intersectionObserver.disconnect()
+  }
+  window.removeEventListener('resize', measureNavbarHeight)
+})
+
+// Measure the navbar height dynamically
+function measureNavbarHeight() {
+  const navbar = document.querySelector('.navbar')
+  if (navbar) {
+    navbarHeight.value = navbar.offsetHeight
+  } else {
+    navbarHeight.value = 0
+  }
+  console.log('[Modal] Navbar height:', navbarHeight.value + 'px')
+}
+
+// Watch for search results and setup infinite scroll when they appear
+watch(() => foodStore.hasSearchResults, (hasResults) => {
+  if (hasResults) {
+    nextTick(() => {
+      setupInfiniteScroll()
+    })
+  } else {
+    // Clean up observer when results disappear
+    if (intersectionObserver) {
+      intersectionObserver.disconnect()
+      intersectionObserver = null
+    }
+  }
+})
+
+// Setup infinite scroll using Intersection Observer
+function setupInfiniteScroll() {
+  if (intersectionObserver) {
+    intersectionObserver.disconnect()
+  }
+
+  if (!scrollTrigger.value) {
+    console.warn('[Infinite Scroll] Scroll trigger element not found')
+    return
+  }
+
+  intersectionObserver = new IntersectionObserver(
+    (entries) => {
+      const firstEntry = entries[0]
+      if (firstEntry.isIntersecting && foodStore.searchHasMore && !foodStore.searchLoadingMore) {
+        console.log('[Infinite Scroll] Trigger visible, loading more...')
+        loadMoreResults()
+      }
+    },
+    {
+      root: null,
+      rootMargin: '200px', // Start loading 200px before reaching the trigger
+      threshold: 0.1
+    }
+  )
+
+  intersectionObserver.observe(scrollTrigger.value)
+  console.log('[Infinite Scroll] Observer attached to scroll trigger')
+}
+
+async function loadMoreResults() {
+  if (!foodStore.searchQuery || foodStore.searchLoadingMore || !foodStore.searchHasMore) {
+    return
+  }
+  
+  console.log('[Infinite Scroll] Loading more results...')
+  await foodStore.loadMore()
+}
 
 // Debounce search
 let searchTimeout = null
@@ -211,6 +355,64 @@ async function lookupBarcode() {
   const product = await foodStore.getProduct(barcode.value)
   if (product) {
     selectedProduct.value = product
+  }
+}
+
+async function scanBarcode() {
+  // Check if barcode scanning is supported
+  if (!Capacitor.isNativePlatform()) {
+    alert('Barcode scanning is only available on mobile devices. Please use a physical device or enter the barcode manually.')
+    return
+  }
+
+  try {
+    scanning.value = true
+
+    // Check and request camera permissions
+    const { camera } = await BarcodeScanner.checkPermissions()
+    
+    if (camera === 'denied') {
+      alert('Camera permission is required to scan barcodes. Please enable it in your device settings.')
+      scanning.value = false
+      return
+    }
+
+    if (camera !== 'granted') {
+      const { camera: newPermission } = await BarcodeScanner.requestPermissions()
+      if (newPermission !== 'granted') {
+        alert('Camera permission was not granted.')
+        scanning.value = false
+        return
+      }
+    }
+
+    // Hide the web content to make the camera visible
+    document.querySelector('body')?.classList.add('barcode-scanner-active')
+
+    // Start scanning
+    const result = await BarcodeScanner.scan()
+    
+    // Show the web content again
+    document.querySelector('body')?.classList.remove('barcode-scanner-active')
+
+    if (result.barcodes && result.barcodes.length > 0) {
+      const scannedBarcode = result.barcodes[0].rawValue
+      barcode.value = scannedBarcode
+      
+      // Automatically look up the product
+      const product = await foodStore.getProduct(scannedBarcode)
+      if (product) {
+        selectedProduct.value = product
+      } else {
+        alert('Product not found. The barcode might not be in the database.')
+      }
+    }
+  } catch (error) {
+    console.error('Barcode scanning error:', error)
+    alert('Failed to scan barcode: ' + error.message)
+    document.querySelector('body')?.classList.remove('barcode-scanner-active')
+  } finally {
+    scanning.value = false
   }
 }
 
@@ -319,6 +521,7 @@ async function addToLog() {
   display: flex;
   gap: 0.5rem;
   margin-bottom: 1rem;
+  margin-top: 1rem;
   background: rgba(255, 255, 255, 0.05);
   backdrop-filter: blur(20px);
   border: 1px solid rgba(255, 255, 255, 0.1);
@@ -326,8 +529,95 @@ async function addToLog() {
   padding: 0.5rem;
 }
 
+.search-box {
+  padding: 0;
+}
+
+.barcode-box.mobile {
+  padding: 0;
+}
+
+.barcode-box.desktop {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.input-with-icon {
+  position: relative;
+  flex: 1;
+  display: flex;
+  align-items: center;
+}
+
+.input-with-icon .search-input,
+.input-with-icon .barcode-input {
+  padding-right: 3rem;
+}
+
+.camera-icon-btn,
+.clear-icon-btn {
+  position: absolute;
+  right: 0.5rem;
+  padding: 0.5rem;
+  background: rgba(102, 126, 234, 0.2);
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  min-width: auto;
+  border: none;
+  cursor: pointer;
+}
+
+.clear-icon-btn {
+  background: rgba(245, 87, 108, 0.2);
+}
+
+.camera-icon-btn:hover:not(:disabled),
+.clear-icon-btn:hover {
+  background: rgba(102, 126, 234, 0.3);
+  transform: none;
+  box-shadow: none;
+}
+
+.clear-icon-btn:hover {
+  background: rgba(245, 87, 108, 0.3);
+}
+
+.camera-icon-btn:disabled {
+  opacity: 0.3;
+}
+
+.camera-icon-btn svg,
+.clear-icon-btn svg {
+  display: block;
+}
+
+.scan-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 1rem;
+  background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.scan-btn:disabled {
+  background: linear-gradient(135deg, rgba(79, 172, 254, 0.5) 0%, rgba(0, 242, 254, 0.5) 100%);
+}
+
+.scan-btn svg {
+  display: block;
+}
+
 .search-input, .barcode-input {
   flex: 1;
+  width: 100%;
   padding: 0.75rem;
   font-size: 1rem;
   background: rgba(255, 255, 255, 0.05);
@@ -357,6 +647,7 @@ button {
   font-size: 1rem;
   font-weight: 600;
   transition: all 0.2s;
+  white-space: nowrap;
 }
 
 button:hover:not(:disabled) {
@@ -367,10 +658,6 @@ button:hover:not(:disabled) {
 button:disabled {
   opacity: 0.5;
   cursor: not-allowed;
-}
-
-.clear-btn {
-  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
 }
 
 .cache-stats {
@@ -477,7 +764,7 @@ button:disabled {
 /* Modal */
 .modal {
   position: fixed;
-  top: 50;
+  top: 0;
   left: 0;
   right: 0;
   bottom: 0;
@@ -488,6 +775,8 @@ button:disabled {
   justify-content: center;
   z-index: 1000;
   padding: 1rem;
+  overflow-y: auto;
+  /* paddingTop is set dynamically via inline style based on navbar height */
 }
 
 .modal-content {
@@ -497,11 +786,12 @@ button:disabled {
   border-radius: 16px;
   max-width: 600px;
   width: 100%;
-  max-height: 90vh;
+  /* max-height is set dynamically via inline style based on navbar height */
   overflow-y: auto;
   position: relative;
   padding: 2rem;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+  margin: auto;
 }
 
 .close-btn {
@@ -657,6 +947,134 @@ button:disabled {
 
 .attribution a:hover {
   color: #764ba2;
+}
+
+/* Barcode Scanner Active State */
+:global(body.barcode-scanner-active) {
+  visibility: hidden;
+  background: transparent !important;
+}
+
+:global(body.barcode-scanner-active .barcode-scanner-ui) {
+  visibility: visible;
+}
+
+/* Infinite Scroll Elements */
+.scroll-trigger {
+  height: 1px;
+  width: 100%;
+  margin-top: 2rem;
+}
+
+.loading-more {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  gap: 1rem;
+}
+
+.loading-more p {
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 0.875rem;
+}
+
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid rgba(102, 126, 234, 0.2);
+  border-top-color: #667eea;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.end-of-results {
+  text-align: center;
+  padding: 2rem;
+  margin-top: 1rem;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+}
+
+.end-of-results p {
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 0.875rem;
+  margin: 0;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .search-content {
+    padding: 1rem;
+  }
+  
+  .product-grid {
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  }
+
+  .loading-more {
+    padding: 1.5rem;
+  }
+
+  .spinner {
+    width: 32px;
+    height: 32px;
+  }
+
+  /* Ensure barcode box doesn't overflow */
+  .barcode-box.desktop {
+    flex-wrap: nowrap;
+    overflow: hidden;
+  }
+
+  .barcode-box.desktop .input-with-icon {
+    min-width: 0;
+  }
+
+  .barcode-box.desktop button {
+    flex-shrink: 0;
+    padding: 0.75rem 1rem;
+    font-size: 0.9rem;
+  }
+
+  h1 {
+    font-size: 1.75rem;
+  }
+
+  .search-input, .barcode-input {
+    font-size: 0.9rem;
+  }
+
+  /* Modal adjustments for mobile */
+  .modal {
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+    padding-bottom: 0.5rem;
+    align-items: flex-start;
+    /* paddingTop is controlled by inline style for navbar offset */
+  }
+
+  .modal-content {
+    /* max-height is controlled by inline style for navbar offset */
+    padding: 1.5rem;
+    margin-top: 0;
+  }
+
+  .product-detail h2 {
+    font-size: 1.25rem;
+  }
+
+  .serving-calculator {
+    padding: 1rem;
+  }
 }
 </style>
 
