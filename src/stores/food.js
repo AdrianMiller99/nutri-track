@@ -56,26 +56,9 @@ export const useFoodStore = defineStore('food', {
       }
 
       try {
-        // For pagination, we need to fetch from API (cache doesn't support pagination well)
-        // Only use cache for initial search (page 1) if not appending
-        if (page === 1 && !append) {
-          const cachedResults = await this._searchCache(query, pageSize)
-          
-          if (cachedResults.length > 0) {
-            this.searchResults = cachedResults
-            this.cacheHits++
-            this.searchPage = 1
-            this.searchTotalCount = cachedResults.length
-            // We don't know if there are more in cache, so assume yes
-            this.searchHasMore = cachedResults.length >= pageSize
-            console.log(`[Cache HIT] Found ${cachedResults.length} results in cache for "${query}"`)
-            return
-          }
-        }
-
-        // Cache miss or loading more - fetch from API
-        this.cacheMisses++
-        console.log(`[Cache MISS] Fetching from API for "${query}" (page ${page})`)
+        // Always fetch from API to get accurate total count and fresh results
+        // Note: We skip cache for searches to ensure pagination and total counts are accurate
+        console.log(`[API] Fetching from API for "${query}" (page ${page})`)
         
         const apiResults = await searchProducts(query, page, pageSize)
         
@@ -88,16 +71,17 @@ export const useFoodStore = defineStore('food', {
         }
         
         this.searchPage = apiResults.page
-        this.searchTotalCount = apiResults.count
+        this.searchTotalCount = apiResults.count || 0
         this.searchPageSize = apiResults.pageSize
         
         // Check if there are more results
         const totalLoaded = this.searchResults.length
-        this.searchHasMore = totalLoaded < apiResults.count
+        this.searchHasMore = apiResults.count > 0 && totalLoaded < apiResults.count
         
         console.log(`[Search] Loaded ${apiResults.products.length} products (total: ${totalLoaded}/${apiResults.count})`)
         
         // Cache all results in background (don't await)
+        // This helps with product detail lookups even if we don't use cache for search
         if (apiResults.products.length > 0) {
           this._cacheProducts(apiResults.products).catch(err => {
             console.warn('Failed to cache search results:', err)

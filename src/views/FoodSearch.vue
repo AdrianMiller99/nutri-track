@@ -83,7 +83,15 @@
 
     <!-- Search Results -->
     <div v-if="foodStore.hasSearchResults" class="results">
-      <h2>Results ({{ foodStore.searchResults.length }}<span v-if="foodStore.searchTotalCount > 0"> of {{ foodStore.searchTotalCount }}</span>)</h2>
+      <h2>
+        Results 
+        <span v-if="foodStore.searchTotalCount > 0">
+          ({{ foodStore.searchResults.length }} of {{ foodStore.searchTotalCount }})
+        </span>
+        <span v-else>
+          ({{ foodStore.searchResults.length }})
+        </span>
+      </h2>
       <div class="product-grid">
         <div
           v-for="product in foodStore.searchResults"
@@ -126,6 +134,38 @@
 
       <!-- Scroll Trigger (invisible element to detect when near bottom) -->
       <div ref="scrollTrigger" class="scroll-trigger"></div>
+    </div>
+
+    <!-- Browser Barcode Scanner Modal -->
+    <div v-if="showBrowserScanner" class="scanner-modal">
+      <div class="scanner-container">
+        <div class="scanner-header">
+          <h2>Scan Barcode</h2>
+          <button @click="stopBrowserScanner" class="scanner-close-btn">×</button>
+        </div>
+        <div id="qr-reader"></div>
+        <p class="scanner-instructions">
+          📷 Hold barcode steady within the frame<br>
+          <small>Supports EAN-13, UPC, Code-128, QR codes, and more</small>
+        </p>
+        
+        <!-- Manual entry fallback -->
+        <div class="scanner-manual">
+          <p class="scanner-or">OR</p>
+          <div class="scanner-input-group">
+            <input
+              v-model="manualBarcode"
+              type="text"
+              placeholder="Enter barcode manually"
+              class="scanner-manual-input"
+              @keyup.enter="handleManualBarcode"
+            />
+            <button @click="handleManualBarcode" :disabled="!manualBarcode" class="scanner-manual-btn">
+              Lookup
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- Product Detail Modal -->
@@ -233,6 +273,7 @@ import { useDayStore } from '@/stores/day'
 import { useAuthStore } from '@/stores/auth'
 import { BarcodeScanner } from '@capacitor-mlkit/barcode-scanning'
 import { Capacitor } from '@capacitor/core'
+import Quagga from '@ericblade/quagga2'
 
 const router = useRouter()
 const foodStore = useFoodStore()
@@ -247,8 +288,11 @@ const scanning = ref(false)
 const isMobile = ref(false)
 const scrollTrigger = ref(null)
 const navbarHeight = ref(0)
+const showBrowserScanner = ref(false)
+const manualBarcode = ref('')
 
 let intersectionObserver = null
+let quaggaInitialized = false
 
 // Detect if we're on a mobile platform and measure navbar height
 onMounted(() => {
@@ -264,6 +308,11 @@ onUnmounted(() => {
     intersectionObserver.disconnect()
   }
   window.removeEventListener('resize', measureNavbarHeight)
+  
+  // Clean up browser scanner if active
+  if (quaggaInitialized) {
+    stopBrowserScanner()
+  }
 })
 
 // Measure the navbar height dynamically
@@ -359,15 +408,19 @@ async function lookupBarcode() {
 }
 
 async function scanBarcode() {
-  // Check if barcode scanning is supported
-  if (!Capacitor.isNativePlatform()) {
-    alert('Barcode scanning is only available on mobile devices. Please use a physical device or enter the barcode manually.')
-    return
+  scanning.value = true
+
+  // Use native scanner on native platforms
+  if (Capacitor.isNativePlatform()) {
+    await scanBarcodeNative()
+  } else {
+    // Use browser-based scanner
+    await scanBarcodeBrowser()
   }
+}
 
+async function scanBarcodeNative() {
   try {
-    scanning.value = true
-
     // Check and request camera permissions
     const { camera } = await BarcodeScanner.checkPermissions()
     
@@ -397,20 +450,152 @@ async function scanBarcode() {
 
     if (result.barcodes && result.barcodes.length > 0) {
       const scannedBarcode = result.barcodes[0].rawValue
-      barcode.value = scannedBarcode
-      
-      // Automatically look up the product
-      const product = await foodStore.getProduct(scannedBarcode)
-      if (product) {
-        selectedProduct.value = product
-      } else {
-        alert('Product not found. The barcode might not be in the database.')
-      }
+      await handleScannedBarcode(scannedBarcode)
     }
   } catch (error) {
-    console.error('Barcode scanning error:', error)
+    console.error('Native barcode scanning error:', error)
     alert('Failed to scan barcode: ' + error.message)
     document.querySelector('body')?.classList.remove('barcode-scanner-active')
+  } finally {
+    scanning.value = false
+  }
+}
+
+async function scanBarcodeBrowser() {
+  try {
+    showBrowserScanner.value = true
+    
+    // Wait for the DOM to be ready
+    await nextTick()
+    
+    console.log('[Browser Scanner] Starting camera with Quagga2...')
+    
+    const config = {
+      inputStream: {
+        name: 'Live',
+        type: 'LiveStream',
+        target: document.querySelector('#qr-reader'),
+        constraints: {
+          width: { min: 640 },
+          height: { min: 480 },
+          facingMode: 'environment', // Use back camera on mobile
+          aspectRatio: { min: 1, max: 2 }
+        },
+        area: { // defines rectangle of the detection/localization area
+          top: '20%',    // top offset
+          right: '10%',  // right offset
+          left: '10%',   // left offset
+          bottom: '20%'  // bottom offset
+        },
+      },
+      decoder: {
+        readers: [
+          'ean_reader',        // EAN-13, EAN-8
+          'ean_8_reader',      // EAN-8
+          'code_128_reader',   // Code 128
+          'code_39_reader',    // Code 39
+          'upc_reader',        // UPC-A, UPC-E
+          'upc_e_reader',      // UPC-E
+        ],
+        debug: {
+          drawBoundingBox: true,
+          showFrequency: true,
+          drawScanline: true,
+          showPattern: true
+        },
+        multiple: false
+      },
+      locate: true,
+      frequency: 10,
+      locator: {
+        patchSize: 'medium',
+        halfSample: true
+      },
+      numOfWorkers: 4,
+    }
+    
+    Quagga.init(config, (err) => {
+      if (err) {
+        console.error('[Browser Scanner] Initialization error:', err)
+        alert('Failed to start camera: ' + err.message)
+        stopBrowserScanner()
+        return
+      }
+      console.log('[Browser Scanner] Camera started successfully')
+      Quagga.start()
+      quaggaInitialized = true
+    })
+    
+    // Set up detection handler
+    Quagga.onDetected(async (result) => {
+      const code = result.codeResult.code
+      const format = result.codeResult.format
+      
+      console.log('[Browser Scanner] ✅ Scanned successfully:', code)
+      console.log('[Browser Scanner] Format:', format)
+      console.log('[Browser Scanner] Confidence:', result.codeResult.decodedCodes)
+      
+      // Only accept high-confidence scans
+      if (result.codeResult.decodedCodes.length > 0) {
+        // Stop scanner and handle barcode
+        await stopBrowserScanner()
+        await handleScannedBarcode(code)
+      }
+    })
+    
+  } catch (error) {
+    console.error('[Browser Scanner] Error:', error)
+    alert('Failed to start camera. Please ensure you have granted camera permissions.')
+    await stopBrowserScanner()
+  }
+}
+
+async function stopBrowserScanner() {
+  try {
+    if (quaggaInitialized) {
+      console.log('[Browser Scanner] Stopping Quagga...')
+      Quagga.offDetected()
+      Quagga.stop()
+      console.log('[Browser Scanner] Stopped successfully')
+      quaggaInitialized = false
+    }
+  } catch (error) {
+    console.error('[Browser Scanner] Error stopping:', error)
+  } finally {
+    showBrowserScanner.value = false
+    scanning.value = false
+    manualBarcode.value = ''
+  }
+}
+
+async function handleManualBarcode() {
+  if (!manualBarcode.value) return
+  
+  console.log('[Manual Barcode] User entered:', manualBarcode.value)
+  await stopBrowserScanner()
+  await handleScannedBarcode(manualBarcode.value)
+}
+
+async function handleScannedBarcode(scannedBarcode) {
+  console.log('[Barcode] Looking up product:', scannedBarcode)
+  barcode.value = scannedBarcode
+  
+  // Show loading state
+  scanning.value = true
+  
+  try {
+    // Automatically look up the product
+    const product = await foodStore.getProduct(scannedBarcode)
+    if (product) {
+      console.log('[Barcode] ✅ Product found:', product.name)
+      selectedProduct.value = product
+    } else {
+      console.log('[Barcode] ❌ Product not found')
+      alert('Product not found. The barcode might not be in the database.')
+    }
+  } catch (error) {
+    console.error('[Barcode] Error looking up product:', error)
+    alert('Error looking up product: ' + error.message)
   } finally {
     scanning.value = false
   }
@@ -957,6 +1142,163 @@ button:disabled {
 
 :global(body.barcode-scanner-active .barcode-scanner-ui) {
   visibility: visible;
+}
+
+/* Browser Barcode Scanner Modal */
+.scanner-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.95);
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+
+.scanner-container {
+  max-width: 600px;
+  width: 100%;
+  background: rgba(15, 15, 15, 0.98);
+  border-radius: 16px;
+  padding: 1.5rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.scanner-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.scanner-header h2 {
+  color: white;
+  margin: 0;
+  font-size: 1.5rem;
+}
+
+.scanner-close-btn {
+  background: rgba(255, 255, 255, 0.05);
+  color: white;
+  border: none;
+  font-size: 2rem;
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  line-height: 1;
+  transition: all 0.2s;
+}
+
+.scanner-close-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  transform: none;
+}
+
+#qr-reader {
+  border-radius: 12px;
+  overflow: hidden;
+  background: #000;
+  position: relative;
+  width: 100%;
+  min-height: 400px;
+}
+
+#qr-reader video {
+  width: 100%;
+  height: auto;
+  border-radius: 12px;
+}
+
+#qr-reader canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+}
+
+/* Quagga2 detection overlays */
+#qr-reader canvas.drawingBuffer {
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
+.scanner-instructions {
+  text-align: center;
+  color: rgba(255, 255, 255, 0.7);
+  margin-top: 1rem;
+  margin-bottom: 0;
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+.scanner-instructions small {
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.scanner-manual {
+  margin-top: 1.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.scanner-or {
+  text-align: center;
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 0.875rem;
+  margin-bottom: 1rem;
+}
+
+.scanner-input-group {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.scanner-manual-input {
+  flex: 1;
+  padding: 0.75rem;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  color: white;
+  font-size: 0.9rem;
+}
+
+.scanner-manual-input::placeholder {
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.scanner-manual-input:focus {
+  outline: none;
+  background: rgba(255, 255, 255, 0.08);
+  border-color: #667eea;
+}
+
+.scanner-manual-btn {
+  padding: 0.75rem 1.5rem;
+  white-space: nowrap;
+}
+
+/* Mobile responsive adjustments for scanner */
+@media (max-width: 768px) {
+  .scanner-container {
+    padding: 1rem;
+  }
+  
+  #qr-reader {
+    min-height: 300px;
+  }
 }
 
 /* Infinite Scroll Elements */
