@@ -22,9 +22,9 @@
       // the real directory in which the app resides, for example:
       // https://username.github.io/repo-name/one/two?a=b&c=d#qwe becomes
       // https://username.github.io/repo-name/?/one/two&a=b~and~c=d#qwe
-      // For nutri-track with /nutri-track/ base and /en/ or /de/ locale,
-      // we need to keep 2 segments: /nutri-track/en/ or /nutri-track/de/
-      var pathSegmentsToKeep = 2;
+      // For nutri-track with /nutri-track/ base path
+      // We only keep 1 segment (the repo name), and let Vue Router handle the locale
+      var pathSegmentsToKeep = 1;
 
       var l = window.location;
       l.replace(
