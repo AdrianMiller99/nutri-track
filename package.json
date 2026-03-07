@@ -9,7 +9,9 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "build:mobile": "vite build --mode capacitor",
     "preview": "vite preview",
+    "android:sync": "npm run build:mobile && npx cap sync android",
     "deploy": "npm run build && node deploy.js"
   },
   "dependencies": {

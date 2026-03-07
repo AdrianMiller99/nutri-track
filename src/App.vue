@@ -3,6 +3,7 @@ import { onMounted, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
+import { hasSupabaseConfig, missingSupabaseEnvVars } from '@/lib/supabaseClient'
 
 const router = useRouter()
 const route = useRoute()
@@ -13,6 +14,10 @@ const availableLocales = ['en', 'de']
 const currentLocale = computed(() => route.params.locale || 'en')
 
 onMounted(async () => {
+  if (!hasSupabaseConfig) {
+    return
+  }
+
   // Initialize auth state
   await authStore.init()
 })
@@ -32,8 +37,24 @@ function switchLocale(newLocale) {
 
 <template>
   <div id="app">
+    <div v-if="!hasSupabaseConfig" class="config-error-screen">
+      <div class="config-error-card">
+        <p class="config-error-eyebrow">Configuration Error</p>
+        <h1>Supabase environment variables are missing</h1>
+        <p class="config-error-copy">
+          This app needs a local <code>.env</code> file before it can start.
+        </p>
+        <p class="config-error-copy">
+          Missing keys: {{ missingSupabaseEnvVars.join(', ') }}
+        </p>
+        <p class="config-error-copy">
+          Create <code>.env</code> from <code>.env.example</code>, add your Supabase values, then rebuild and sync Android.
+        </p>
+      </div>
+    </div>
+
     <!-- Navigation Bar (only show when logged in and not on landing/auth) -->
-    <nav v-if="authStore.user && !route.path.endsWith('/') && !route.path.endsWith('/auth')" class="navbar">
+    <nav v-else-if="authStore.user && !route.path.endsWith('/') && !route.path.endsWith('/auth')" class="navbar">
       <div class="nav-container">
         <router-link :to="`/${currentLocale}`" class="logo-link">
           <h1 class="logo">🍎 {{ $t('app.name') }}</h1>
@@ -66,7 +87,7 @@ function switchLocale(newLocale) {
     </nav>
 
     <!-- Main Content -->
-    <main :class="{ 'with-nav': authStore.user && route.path !== '/' && route.path !== '/auth' }">
+    <main v-if="hasSupabaseConfig" :class="{ 'with-nav': authStore.user && route.path !== '/' && route.path !== '/auth' }">
       <router-view />
     </main>
   </div>
@@ -87,6 +108,46 @@ body {
 
 #app {
   min-height: 100vh;
+}
+
+.config-error-screen {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 2rem;
+}
+
+.config-error-card {
+  width: min(640px, 100%);
+  background: rgba(18, 18, 18, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 20px;
+  padding: 2rem;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
+}
+
+.config-error-eyebrow {
+  color: #ff9d7a;
+  font-size: 0.875rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-bottom: 0.75rem;
+}
+
+.config-error-card h1 {
+  font-size: clamp(1.75rem, 5vw, 2.5rem);
+  margin-bottom: 1rem;
+}
+
+.config-error-copy {
+  color: rgba(255, 255, 255, 0.72);
+  line-height: 1.6;
+  margin-top: 0.75rem;
+}
+
+.config-error-copy code {
+  color: #ffffff;
 }
 
 /* Navigation */

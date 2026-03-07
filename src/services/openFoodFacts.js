@@ -9,6 +9,8 @@
  * Note: Uses Supabase Edge Functions as proxy to avoid CORS issues
  */
 
+import { assertSupabaseConfig } from '@/lib/supabaseClient'
+
 // Use Supabase Edge Functions as proxy (avoids CORS)
 const USE_EDGE_FUNCTIONS = true
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL
@@ -77,6 +79,8 @@ export async function searchProducts(query, page = 1, pageSize = 25) {
     let url, fetchOptions
 
     if (USE_EDGE_FUNCTIONS) {
+      assertSupabaseConfig()
+
       // Use Supabase Edge Function as proxy
       const params = new URLSearchParams({
         query: query.trim(),
@@ -141,6 +145,8 @@ export async function getProductByBarcode(barcode) {
     let url, fetchOptions
 
     if (USE_EDGE_FUNCTIONS) {
+      assertSupabaseConfig()
+
       // Use Supabase Edge Function as proxy
       const params = new URLSearchParams({ barcode })
       url = `${SUPABASE_URL}/functions/v1/get-product?${params}`
@@ -218,4 +224,3 @@ export default {
   calculateNutrients,
   USER_AGENT
 }
-
