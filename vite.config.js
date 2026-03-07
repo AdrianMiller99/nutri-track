@@ -7,8 +7,9 @@ import vue from '@vitejs/plugin-vue'
 export default defineConfig(async ({ command, mode }) => {
   const plugins = [vue()]
   const isCapacitorBuild = mode === 'capacitor'
+  const enableVueDevTools = process.env.ENABLE_VUE_DEVTOOLS === 'true'
 
-  if (command === 'serve') {
+  if (command === 'serve' && enableVueDevTools) {
     const { default: vueDevTools } = await import('vite-plugin-vue-devtools')
     plugins.push(vueDevTools())
   }

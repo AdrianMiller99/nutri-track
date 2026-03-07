@@ -1,17 +1,16 @@
 <script setup>
-import { onMounted, computed } from 'vue'
-import { useRouter, useRoute } from 'vue-router'
-import { useI18n } from 'vue-i18n'
+import { computed, onMounted } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { hasSupabaseConfig, missingSupabaseEnvVars } from '@/lib/supabaseClient'
+import { useSurface } from '@/shared/platform/surface'
+import SetupErrorScreen from '@/shared/components/SetupErrorScreen.vue'
+import WebAppShell from '@/web/layouts/WebAppShell.vue'
+import MobileAppShell from '@/mobile/layouts/MobileAppShell.vue'
 
-const router = useRouter()
-const route = useRoute()
 const authStore = useAuthStore()
-const { locale } = useI18n()
+const { isMobileSurface } = useSurface()
 
-const availableLocales = ['en', 'de']
-const currentLocale = computed(() => route.params.locale || 'en')
+const activeShell = computed(() => (isMobileSurface.value ? MobileAppShell : WebAppShell))
 
 onMounted(async () => {
   if (!hasSupabaseConfig) {
@@ -21,75 +20,12 @@ onMounted(async () => {
   // Initialize auth state
   await authStore.init()
 })
-
-async function logout() {
-  await authStore.signOut()
-  router.push(`/${currentLocale.value}/auth`)
-}
-
-function switchLocale(newLocale) {
-  // Replace current locale in URL with new locale
-  const currentPath = route.path
-  const newPath = currentPath.replace(`/${currentLocale.value}`, `/${newLocale}`)
-  router.push(newPath)
-}
 </script>
 
 <template>
   <div id="app">
-    <div v-if="!hasSupabaseConfig" class="config-error-screen">
-      <div class="config-error-card">
-        <p class="config-error-eyebrow">Configuration Error</p>
-        <h1>Supabase environment variables are missing</h1>
-        <p class="config-error-copy">
-          This app needs a local <code>.env</code> file before it can start.
-        </p>
-        <p class="config-error-copy">
-          Missing keys: {{ missingSupabaseEnvVars.join(', ') }}
-        </p>
-        <p class="config-error-copy">
-          Create <code>.env</code> from <code>.env.example</code>, add your Supabase values, then rebuild and sync Android.
-        </p>
-      </div>
-    </div>
-
-    <!-- Navigation Bar (only show when logged in and not on landing/auth) -->
-    <nav v-else-if="authStore.user && !route.path.endsWith('/') && !route.path.endsWith('/auth')" class="navbar">
-      <div class="nav-container">
-        <router-link :to="`/${currentLocale}`" class="logo-link">
-          <h1 class="logo">🍎 {{ $t('app.name') }}</h1>
-        </router-link>
-        
-        <div class="nav-links">
-          <router-link :to="`/${currentLocale}/app/dashboard`" class="nav-link">
-            📊 {{ $t('nav.dashboard') }}
-          </router-link>
-          <router-link :to="`/${currentLocale}/app/search`" class="nav-link">
-            🔍 {{ $t('nav.search') }}
-          </router-link>
-        </div>
-
-        <div class="nav-actions">
-          <div class="language-switcher">
-            <button 
-              v-for="locale in availableLocales" 
-              :key="locale"
-              @click="switchLocale(locale)"
-              :class="['locale-btn', { active: currentLocale === locale }]"
-            >
-              {{ locale.toUpperCase() }}
-            </button>
-          </div>
-          <span class="user-email">{{ authStore.user.email }}</span>
-          <button @click="logout" class="logout-btn">{{ $t('nav.logout') }}</button>
-        </div>
-      </div>
-    </nav>
-
-    <!-- Main Content -->
-    <main v-if="hasSupabaseConfig" :class="{ 'with-nav': authStore.user && route.path !== '/' && route.path !== '/auth' }">
-      <router-view />
-    </main>
+    <SetupErrorScreen v-if="!hasSupabaseConfig" :missing-keys="missingSupabaseEnvVars" />
+    <component :is="activeShell" v-else />
   </div>
 </template>
 
@@ -108,195 +44,5 @@ body {
 
 #app {
   min-height: 100vh;
-}
-
-.config-error-screen {
-  min-height: 100vh;
-  display: grid;
-  place-items: center;
-  padding: 2rem;
-}
-
-.config-error-card {
-  width: min(640px, 100%);
-  background: rgba(18, 18, 18, 0.95);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 20px;
-  padding: 2rem;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
-}
-
-.config-error-eyebrow {
-  color: #ff9d7a;
-  font-size: 0.875rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  margin-bottom: 0.75rem;
-}
-
-.config-error-card h1 {
-  font-size: clamp(1.75rem, 5vw, 2.5rem);
-  margin-bottom: 1rem;
-}
-
-.config-error-copy {
-  color: rgba(255, 255, 255, 0.72);
-  line-height: 1.6;
-  margin-top: 0.75rem;
-}
-
-.config-error-copy code {
-  color: #ffffff;
-}
-
-/* Navigation */
-.navbar {
-  background: rgba(15, 15, 15, 0.8);
-  backdrop-filter: blur(20px);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
-  position: sticky;
-  top: 0;
-  z-index: 100;
-}
-
-.nav-container {
-  max-width: 1400px;
-  margin: 0 auto;
-  padding: 1rem 2rem;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 2rem;
-}
-
-.logo-link {
-  text-decoration: none;
-  cursor: pointer;
-  transition: transform 0.2s;
-}
-
-.logo-link:hover {
-  transform: translateY(-2px);
-}
-
-.logo {
-  font-size: 1.5rem;
-  margin: 0;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  font-weight: 700;
-}
-
-.nav-links {
-  display: flex;
-  gap: 1rem;
-  flex: 1;
-}
-
-.nav-link {
-  padding: 0.5rem 1rem;
-  border-radius: 8px;
-  text-decoration: none;
-  color: rgba(255, 255, 255, 0.7);
-  transition: all 0.2s;
-  font-weight: 500;
-}
-
-.nav-link:hover {
-  background: rgba(255, 255, 255, 0.05);
-  color: rgba(255, 255, 255, 0.95);
-}
-
-.nav-link.router-link-active {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-}
-
-.nav-actions {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-}
-
-.language-switcher {
-  display: flex;
-  gap: 0.25rem;
-  background: rgba(255, 255, 255, 0.05);
-  padding: 0.25rem;
-  border-radius: 6px;
-}
-
-.locale-btn {
-  padding: 0.25rem 0.5rem;
-  background: transparent;
-  color: rgba(255, 255, 255, 0.6);
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 0.75rem;
-  font-weight: 600;
-  transition: all 0.2s;
-}
-
-.locale-btn:hover {
-  background: rgba(255, 255, 255, 0.1);
-  color: rgba(255, 255, 255, 0.9);
-}
-
-.locale-btn.active {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-}
-
-.user-email {
-  color: rgba(255, 255, 255, 0.6);
-  font-size: 0.875rem;
-}
-
-.logout-btn {
-  padding: 0.5rem 1rem;
-  background: rgba(244, 67, 54, 0.8);
-  color: white;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 0.875rem;
-  transition: all 0.2s;
-}
-
-.logout-btn:hover {
-  background: rgba(211, 47, 47, 1);
-  transform: translateY(-1px);
-}
-
-/* Main Content */
-main {
-  min-height: calc(100vh - 80px);
-}
-
-main.with-nav {
-  padding-top: 1rem;
-}
-
-/* Responsive */
-@media (max-width: 768px) {
-  .nav-container {
-    flex-wrap: wrap;
-    padding: 1rem;
-  }
-
-  .user-email {
-    display: none;
-  }
-
-  .nav-links {
-    order: 3;
-    width: 100%;
-    justify-content: center;
-  }
 }
 </style>
