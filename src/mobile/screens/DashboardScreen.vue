@@ -17,6 +17,7 @@ const { t } = useI18n()
 const dashboardViewport = ref(null)
 const editingItem = ref(null)
 const editServingGrams = ref(0)
+const editServingInput = ref(null)
 const touchStartX = ref(null)
 const touchStartY = ref(null)
 const dragX = ref(0)
@@ -86,11 +87,20 @@ function openAddFood() {
 function startEdit(item) {
   editingItem.value = item
   editServingGrams.value = item.serving_grams
+  nextTick(() => {
+    editServingInput.value?.focus()
+    editServingInput.value?.select?.()
+  })
 }
 
 function closeEdit() {
   editingItem.value = null
   editServingGrams.value = 0
+}
+
+function focusEditServingInput() {
+  editServingInput.value?.focus()
+  editServingInput.value?.select?.()
 }
 
 async function saveEdit() {
@@ -376,8 +386,17 @@ function handleSwipeCancel() {
                   <span>F {{ item.fat_g }}g</span>
                 </div>
                 <div class="item-actions">
-                  <button @click="startEdit(item)">Edit</button>
-                  <button class="danger" @click="deleteItem(item)">Delete</button>
+                  <button class="icon-action" aria-label="Edit item" @click="startEdit(item)">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                      <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+                      <path d="M12.085 6.5l5.415 5.415l-8.793 8.792a1 1 0 0 1 -.707 .293h-4a1 1 0 0 1 -1 -1v-4a1 1 0 0 1 .293 -.707zm5.406 -2.698a3.828 3.828 0 0 1 1.716 6.405l-.292 .293l-5.415 -5.415l.293 -.292a3.83 3.83 0 0 1 3.698 -.991" />
+                    </svg>
+                  </button>
+                  <button class="icon-action danger-icon-btn" aria-label="Delete item" @click="deleteItem(item)">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                      <path d="M9 3a1 1 0 0 0 -.894 .553l-.382 .764l-3.724 .683a1 1 0 0 0 .18 1.984h.82l.724 10.138a3 3 0 0 0 2.992 2.778h6.568a3 3 0 0 0 2.992 -2.778l.724 -10.138h.82a1 1 0 0 0 .18 -1.984l-3.724 -.683l-.382 -.764a1 1 0 0 0 -.894 -.553zm0 2h6l.5 1h-7z" />
+                    </svg>
+                  </button>
                 </div>
               </article>
             </div>
@@ -486,8 +505,17 @@ function handleSwipeCancel() {
                   <span>F {{ item.fat_g }}g</span>
                 </div>
                 <div class="item-actions">
-                  <button @click="startEdit(item)">Edit</button>
-                  <button class="danger" @click="deleteItem(item)">Delete</button>
+                  <button class="icon-action" aria-label="Edit item" @click="startEdit(item)">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                      <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+                      <path d="M12.085 6.5l5.415 5.415l-8.793 8.792a1 1 0 0 1 -.707 .293h-4a1 1 0 0 1 -1 -1v-4a1 1 0 0 1 .293 -.707zm5.406 -2.698a3.828 3.828 0 0 1 1.716 6.405l-.292 .293l-5.415 -5.415l.293 -.292a3.83 3.83 0 0 1 3.698 -.991" />
+                    </svg>
+                  </button>
+                  <button class="icon-action danger-icon-btn" aria-label="Delete item" @click="deleteItem(item)">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                      <path d="M9 3a1 1 0 0 0 -.894 .553l-.382 .764l-3.724 .683a1 1 0 0 0 .18 1.984h.82l.724 10.138a3 3 0 0 0 2.992 2.778h6.568a3 3 0 0 0 2.992 -2.778l.724 -10.138h.82a1 1 0 0 0 .18 -1.984l-3.724 -.683l-.382 -.764a1 1 0 0 0 -.894 -.553zm0 2h6l.5 1h-7z" />
+                    </svg>
+                  </button>
                 </div>
               </article>
             </div>
@@ -502,7 +530,15 @@ function handleSwipeCancel() {
         <h3>{{ editingItem.label }}</h3>
         <label>
           <span>Serving grams</span>
-          <input v-model.number="editServingGrams" type="number" min="1" step="1">
+          <div class="serving-input-row">
+            <input ref="editServingInput" v-model.number="editServingGrams" type="number" min="1" step="1">
+            <button type="button" class="serving-edit-btn" aria-label="Edit serving grams" @click="focusEditServingInput">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+                <path d="M12.085 6.5l5.415 5.415l-8.793 8.792a1 1 0 0 1 -.707 .293h-4a1 1 0 0 1 -1 -1v-4a1 1 0 0 1 .293 -.707zm5.406 -2.698a3.828 3.828 0 0 1 1.716 6.405l-.292 .293l-5.415 -5.415l.293 -.292a3.83 3.83 0 0 1 3.698 -.991" />
+              </svg>
+            </button>
+          </div>
         </label>
         <div class="sheet-actions">
           <button class="ghost" @click="closeEdit">Cancel</button>
@@ -704,15 +740,19 @@ function handleSwipeCancel() {
   font: inherit;
 }
 
-.item-actions button {
+.icon-action {
   border: none;
-  border-radius: 16px;
-  padding: 0.8rem 0.95rem;
+  width: 2.9rem;
+  height: 2.9rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
   background: rgba(255, 255, 255, 0.08);
   color: white;
 }
 
-.item-actions .danger {
+.danger-icon-btn {
   color: #ff9e9e;
   background: rgba(255, 95, 95, 0.12);
 }
@@ -847,6 +887,40 @@ function handleSwipeCancel() {
   background: rgba(255, 255, 255, 0.05);
   color: white;
   padding: 1rem;
+}
+
+.sheet label input:focus {
+  outline: none;
+  border-color: rgba(255, 209, 102, 0.7);
+}
+
+.serving-input-row {
+  position: relative;
+}
+
+.serving-input-row input {
+  padding-right: 4rem;
+}
+
+.serving-edit-btn {
+  position: absolute;
+  top: 50%;
+  right: 0.7rem;
+  transform: translateY(-50%);
+  width: 2.6rem;
+  height: 2.6rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.9);
+  line-height: 1;
+}
+
+.serving-edit-btn svg {
+  display: block;
 }
 
 .sheet-actions {
