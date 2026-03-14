@@ -14,21 +14,24 @@ const { t } = useI18n()
 const tabItems = computed(() => [
   { label: 'Today', icon: '◎', to: `/${currentLocale.value}/app/dashboard` },
   { label: 'Search', icon: '⌕', to: `/${currentLocale.value}/app/search` },
+  { label: 'Lists', icon: '▤', to: `/${currentLocale.value}/app/lists` },
 ])
 
 const showTabBar = computed(() => authStore.user && route.path.includes('/app/'))
 const pageEyebrow = computed(() => {
   if (route.path.endsWith('/app/search')) return t('nav.search')
   if (route.path.endsWith('/app/dashboard')) return t('nav.dashboard')
+  if (route.path.endsWith('/app/lists')) return 'Saved lists'
   if (route.path.endsWith('/auth')) return 'Account'
   return 'Nutri Track'
 })
 
 const pageTitle = computed(() => {
-  if (route.path.includes('/app/')) {
+  if (route.path.endsWith('/app/search') || route.path.endsWith('/app/dashboard')) {
     return formatHeaderDateLabel(dayStore.selectedDate)
   }
 
+  if (route.path.endsWith('/app/lists')) return 'Lists'
   if (route.path.endsWith('/auth')) return 'Account'
   return 'Nutri Track'
 })
@@ -176,23 +179,22 @@ onUnmounted(() => {
 }
 
 .mobile-main.with-tabbar {
-  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 6.5rem);
+  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 5.75rem);
 }
 
 .tabbar {
   position: fixed;
-  left: 1rem;
-  right: 1rem;
-  bottom: calc(env(safe-area-inset-bottom, 0px) + 0.9rem);
+  left: 0;
+  right: 0;
+  bottom: 0;
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 0.75rem;
-  padding: 0.75rem;
-  border-radius: 24px;
-  background: rgba(18, 17, 22, 0.88);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.25rem;
+  padding: 0.55rem 0.75rem calc(env(safe-area-inset-bottom, 0px) + 0.55rem);
+  background: rgba(17, 16, 22, 0.96);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
   backdrop-filter: blur(24px);
-  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.35);
+  box-shadow: 0 -12px 28px rgba(0, 0, 0, 0.22);
   z-index: 40;
 }
 
@@ -203,14 +205,14 @@ onUnmounted(() => {
   gap: 0.25rem;
   text-decoration: none;
   color: rgba(255, 255, 255, 0.68);
-  border-radius: 18px;
-  padding: 0.8rem 0.5rem;
+  border-radius: 14px;
+  padding: 0.7rem 0.5rem 0.55rem;
   transition: background 0.2s ease, color 0.2s ease;
 }
 
 .tabbar-link.router-link-active {
-  background: linear-gradient(135deg, #f4b942 0%, #ec6f4f 100%);
-  color: #111111;
+  background: rgba(255, 255, 255, 0.08);
+  color: #ffd888;
 }
 
 .tabbar-icon {

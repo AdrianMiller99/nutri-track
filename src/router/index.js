@@ -48,6 +48,11 @@ const router = createRouter({
           name: 'FoodSearch',
           component: FoodSearch,
           meta: { requiresAuth: true }
+        },
+        {
+          path: 'app/lists',
+          component: () => import('@/views/Lists.vue'),
+          meta: { requiresAuth: true },
         }
       ]
     },

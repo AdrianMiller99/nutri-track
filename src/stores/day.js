@@ -13,6 +13,26 @@ function getTodayDateString() {
   return formatDate(new Date())
 }
 
+function buildEntryItemRecord(entryId, item) {
+  return {
+    entry_id: entryId,
+    product_code: item.product_code || null,
+    label: item.label,
+    brand: item.brand || null,
+    image_url: item.image_url || null,
+    serving_grams: item.serving_grams,
+    quantity: 1,
+    kcal: item.kcal || 0,
+    protein_g: item.protein_g || 0,
+    carb_g: item.carb_g || 0,
+    fat_g: item.fat_g || 0,
+    fiber_g: item.fiber_g || 0,
+    sugar_g: item.sugar_g || 0,
+    sodium_mg: item.sodium_mg || 0,
+    meal_type: null,
+  }
+}
+
 /**
  * Store for managing daily food entries
  * Handles today's log, totals, and navigation between days
@@ -83,6 +103,43 @@ export const useDayStore = defineStore('day', {
   },
 
   actions: {
+    async getOrCreateEntryForDate(dateString) {
+      const authStore = useAuthStore()
+      if (!authStore.user) {
+        throw new Error('User not authenticated')
+      }
+
+      const { data: existingEntry, error: fetchError } = await supabase
+        .from('entries')
+        .select('*')
+        .eq('user_id', authStore.user.id)
+        .eq('date', dateString)
+        .single()
+
+      if (fetchError && fetchError.code !== 'PGRST116') {
+        throw fetchError
+      }
+
+      if (existingEntry) {
+        return existingEntry
+      }
+
+      const { data: newEntry, error: createError } = await supabase
+        .from('entries')
+        .insert({
+          user_id: authStore.user.id,
+          date: dateString,
+        })
+        .select()
+        .single()
+
+      if (createError) {
+        throw createError
+      }
+
+      return newEntry
+    },
+
     /**
      * Load or create entry for selected date
      */
@@ -97,35 +154,7 @@ export const useDayStore = defineStore('day', {
       this.error = null
 
       try {
-        // Try to fetch existing entry
-        const { data: existingEntry, error: fetchError } = await supabase
-          .from('entries')
-          .select('*')
-          .eq('user_id', authStore.user.id)
-          .eq('date', this.selectedDate)
-          .single()
-
-        if (fetchError && fetchError.code !== 'PGRST116') {
-          // PGRST116 = not found, which is okay
-          throw fetchError
-        }
-
-        if (existingEntry) {
-          this.currentEntry = existingEntry
-        } else {
-          // Create new entry for this date
-          const { data: newEntry, error: createError } = await supabase
-            .from('entries')
-            .insert({
-              user_id: authStore.user.id,
-              date: this.selectedDate
-            })
-            .select()
-            .single()
-
-          if (createError) throw createError
-          this.currentEntry = newEntry
-        }
+        this.currentEntry = await this.getOrCreateEntryForDate(this.selectedDate)
 
         // Load items for this entry
         await this.loadItems()
@@ -232,6 +261,41 @@ export const useDayStore = defineStore('day', {
         throw error
       } finally {
         this.savingItem = false
+      }
+    },
+
+    async addSavedItemsToDate(savedItems, dateString) {
+      const targetDate = dateString > getTodayDateString() ? getTodayDateString() : dateString
+
+      if (!Array.isArray(savedItems) || savedItems.length === 0) {
+        throw new Error('No items to add')
+      }
+
+      this.error = null
+
+      try {
+        const entry = await this.getOrCreateEntryForDate(targetDate)
+        const itemPayload = savedItems.map((item) => buildEntryItemRecord(entry.id, item))
+
+        const { data, error } = await supabase
+          .from('entry_items')
+          .insert(itemPayload)
+          .select()
+
+        if (error) {
+          throw error
+        }
+
+        if (this.selectedDate === targetDate) {
+          this.currentEntry = entry
+          await this.loadItems()
+        }
+
+        return data || []
+      } catch (error) {
+        console.error('Error adding saved items to date:', error)
+        this.error = error.message
+        throw error
       }
     },
 

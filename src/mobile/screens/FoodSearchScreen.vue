@@ -5,13 +5,15 @@ import { Capacitor } from '@capacitor/core'
 import { useAuthStore } from '@/stores/auth'
 import { useDayStore } from '@/stores/day'
 import { useFoodStore } from '@/stores/food'
+import { useListsStore } from '@/stores/lists'
 import { useDaySwipe } from '@/shared/composables/useDaySwipe'
 import { useLocaleRoute } from '@/shared/composables/useLocaleRoute'
 
 const authStore = useAuthStore()
 const dayStore = useDayStore()
 const foodStore = useFoodStore()
-const { pushLocale } = useLocaleRoute()
+const listsStore = useListsStore()
+const { localePath, pushLocale, route, router } = useLocaleRoute()
 
 const query = ref('')
 const barcode = ref('')
@@ -28,6 +30,7 @@ const productSheet = ref(null)
 const servingInput = ref(null)
 const productSheetOffsetY = ref(0)
 const productSheetTransition = ref('transform 0.22s ease')
+const showListPicker = ref(false)
 
 let searchTimeout = null
 let intersectionObserver = null
@@ -42,7 +45,9 @@ const calculatedNutrients = computed(() => {
   if (!selectedProduct.value) return {}
   return foodStore.calculateServingNutrients(selectedProduct.value, servingGrams.value)
 })
-const isOverlayOpen = computed(() => Boolean(selectedProduct.value) || showBrowserScanner.value)
+const targetListId = computed(() => (typeof route.query.list === 'string' ? route.query.list : ''))
+const targetList = computed(() => listsStore.getListById(targetListId.value))
+const isOverlayOpen = computed(() => Boolean(selectedProduct.value) || showBrowserScanner.value || showListPicker.value)
 const { handleTouchStart, handleTouchEnd, handleTouchCancel } = useDaySwipe({
   onSwipePrevious: () => dayStore.previousDay(),
   onSwipeNext: () => dayStore.nextDay(),
@@ -67,6 +72,14 @@ watch(
 watch(isOverlayOpen, (isOpen) => {
   toggleBodyScrollLock(isOpen)
 })
+
+watch(
+  () => authStore.user?.id,
+  (userId) => {
+    listsStore.syncWithUser(userId)
+  },
+  { immediate: true }
+)
 
 onMounted(async () => {
   if (!authStore.user) {
@@ -125,11 +138,13 @@ function selectProduct(product) {
   servingGrams.value = product.serving_quantity || 100
   productSheetOffsetY.value = 0
   productSheetTransition.value = 'transform 0.22s ease'
+  showListPicker.value = false
 }
 
 function closeProductSheet() {
   productSheetOffsetY.value = 0
   productSheetTransition.value = 'transform 0.22s ease'
+  showListPicker.value = false
   selectedProduct.value = null
 }
 
@@ -195,6 +210,41 @@ async function addToLog() {
   try {
     await dayStore.addItem(selectedProduct.value, servingGrams.value, calculatedNutrients.value)
     setStatus(`Added ${selectedProduct.value.name}`, 'success')
+    closeProductSheet()
+  } catch (error) {
+    setStatus(error.message, 'error')
+  }
+}
+
+function openListPicker() {
+  if (!listsStore.hasLists) {
+    openListsScreen()
+    return
+  }
+
+  showListPicker.value = true
+}
+
+function closeListPicker() {
+  showListPicker.value = false
+}
+
+function openListsScreen() {
+  router.push({ path: localePath('/app/lists') })
+  closeProductSheet()
+}
+
+async function addToList(listId) {
+  if (!selectedProduct.value || servingGrams.value <= 0) return
+
+  try {
+    const list = listsStore.getListById(listId)
+    if (!list) {
+      throw new Error('List not found')
+    }
+
+    listsStore.addItemToList(listId, selectedProduct.value, servingGrams.value, calculatedNutrients.value)
+    setStatus(`Saved ${selectedProduct.value.name} to ${list.name}`, 'success')
     closeProductSheet()
   } catch (error) {
     setStatus(error.message, 'error')
@@ -497,7 +547,56 @@ function setupInfiniteScroll() {
           </div>
         </div>
 
-        <button class="add-btn" @click="addToLog">{{ $t('search.addButton', { grams: servingGrams }) }}</button>
+        <div class="sheet-actions">
+          <button class="add-btn" @click="addToLog">{{ $t('search.addButton', { grams: servingGrams }) }}</button>
+          <button
+            v-if="targetList"
+            class="secondary-btn"
+            @click="addToList(targetList.id)"
+          >
+            Add {{ servingGrams }}g to {{ targetList.name }}
+          </button>
+          <button
+            v-else-if="listsStore.hasLists"
+            class="secondary-btn"
+            @click="openListPicker"
+          >
+            Add to list
+          </button>
+          <button
+            v-else
+            class="secondary-btn"
+            @click="openListsScreen"
+          >
+            Create a list first
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div v-if="showListPicker" class="sheet-backdrop nested" @click="closeListPicker">
+      <div class="sheet picker-sheet" @click.stop>
+        <div class="sheet-header">
+          <div>
+            <p class="eyebrow">Choose list</p>
+            <h3>Save {{ selectedProduct?.name }}</h3>
+          </div>
+          <button class="close-btn" @click="closeListPicker">×</button>
+        </div>
+
+        <div class="list-picker-grid">
+          <button
+            v-for="list in listsStore.lists"
+            :key="list.id"
+            class="list-picker-btn"
+            @click="addToList(list.id)"
+          >
+            <strong>{{ list.name }}</strong>
+            <span>{{ list.items.length }} item<span v-if="list.items.length !== 1">s</span></span>
+          </button>
+        </div>
+
+        <button class="secondary-btn manage-btn" @click="openListsScreen">Manage lists</button>
       </div>
     </div>
 
@@ -581,14 +680,18 @@ input:focus {
 .scan-btn,
 .ghost-btn,
 .add-btn,
-.close-btn {
+.close-btn,
+.secondary-btn,
+.list-picker-btn {
   border: none;
   font: inherit;
 }
 
 .icon-btn,
 .lookup-btn,
-.ghost-btn {
+.ghost-btn,
+.secondary-btn,
+.list-picker-btn {
   padding: 0.95rem 1rem;
   border-radius: 18px;
   background: rgba(255, 255, 255, 0.08);
@@ -708,6 +811,11 @@ input:focus {
   z-index: 60;
 }
 
+.sheet-backdrop.nested {
+  z-index: 70;
+  background: rgba(0, 0, 0, 0.35);
+}
+
 .sheet {
   width: 100%;
   max-height: 88vh;
@@ -718,6 +826,10 @@ input:focus {
   padding: 1.25rem 1rem calc(env(safe-area-inset-bottom, 0px) + 1rem);
   background: #17151c;
   border-radius: 28px 28px 0 0;
+}
+
+.picker-sheet {
+  max-height: 72vh;
 }
 
 .sheet-header {
@@ -815,9 +927,35 @@ input:focus {
   font-size: 1.15rem;
 }
 
-.add-btn {
-  width: 100%;
+.sheet-actions {
+  display: grid;
+  gap: 0.75rem;
   margin-top: 1rem;
+}
+
+.add-btn,
+.secondary-btn {
+  width: 100%;
+}
+
+.list-picker-grid {
+  display: grid;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.list-picker-btn {
+  display: grid;
+  gap: 0.2rem;
+  text-align: left;
+}
+
+.list-picker-btn span {
+  color: rgba(255, 255, 255, 0.66);
+}
+
+.manage-btn {
+  margin-top: 0.9rem;
 }
 
 .video-shell {
