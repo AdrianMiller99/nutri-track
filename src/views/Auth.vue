@@ -179,9 +179,9 @@ async function handleLogin() {
   authStore.error = null
 
   try {
-    const { error } = await authStore.signIn(loginEmail.value, loginPassword.value)
+    const { data, error } = await authStore.signIn(loginEmail.value, loginPassword.value)
     
-    if (!error) {
+    if (!error && data?.session) {
       // Success! Router will redirect to dashboard
       const locale = router.currentRoute.value.params.locale || 'en'
       router.push(`/${locale}/app/dashboard`)
@@ -210,11 +210,12 @@ async function handleSignup() {
 
   loading.value = true
   authStore.error = null
+  signupSuccess.value = false
 
   try {
-    const { error } = await authStore.signUp(signupEmail.value, signupPassword.value)
+    const { data, error } = await authStore.signUp(signupEmail.value, signupPassword.value)
     
-    if (!error) {
+    if (!error && data?.user) {
       // Show success message
       signupSuccess.value = true
       

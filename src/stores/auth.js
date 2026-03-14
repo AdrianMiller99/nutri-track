@@ -33,7 +33,7 @@ export const useAuthStore = defineStore('auth', {
       async signUp(email, password) {
         if (!hasSupabaseConfig) {
           this.error = supabaseConfigError
-          return null
+          return { data: null, error: new Error(supabaseConfigError) }
         }
 
         this.error = null
@@ -45,18 +45,18 @@ export const useAuthStore = defineStore('auth', {
           },
         })
         if (error) this.error = error.message
-        return data
+        return { data, error }
       },
       async signIn(email, password) {
         if (!hasSupabaseConfig) {
           this.error = supabaseConfigError
-          return null
+          return { data: null, error: new Error(supabaseConfigError) }
         }
 
         this.error = null
         const { data, error } = await supabase.auth.signInWithPassword({ email, password })
         if (error) this.error = error.message
-        return data
+        return { data, error }
       },
       async signOut() {
         if (!hasSupabaseConfig) {
