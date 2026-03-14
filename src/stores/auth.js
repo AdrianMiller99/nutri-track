@@ -1,5 +1,10 @@
 import { defineStore } from 'pinia'
-import { hasSupabaseConfig, supabase, supabaseConfigError } from '@/lib/supabaseClient'
+import {
+  getSupabaseEmailRedirectUrl,
+  hasSupabaseConfig,
+  supabase,
+  supabaseConfigError,
+} from '@/lib/supabaseClient'
 
 export const useAuthStore = defineStore('auth', {
     state: () => ({
@@ -32,7 +37,13 @@ export const useAuthStore = defineStore('auth', {
         }
 
         this.error = null
-        const { data, error } = await supabase.auth.signUp({ email, password })
+        const { data, error } = await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            emailRedirectTo: getSupabaseEmailRedirectUrl(),
+          },
+        })
         if (error) this.error = error.message
         return data
       },
