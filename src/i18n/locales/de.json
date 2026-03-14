@@ -84,6 +84,7 @@
   "dashboard": {
     "title": "Dashboard",
     "today": "Heute",
+    "yesterday": "Gestern",
     "prevDay": "Zurück",
     "nextDay": "Weiter",
     "goToToday": "Zu Heute",
@@ -187,4 +188,3 @@
     "addFailed": "Lebensmittel konnte nicht hinzugefügt werden"
   }
 }
-

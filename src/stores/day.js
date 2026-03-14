@@ -2,6 +2,17 @@ import { defineStore } from 'pinia'
 import { supabase } from '@/lib/supabaseClient'
 import { useAuthStore } from './auth'
 
+function formatDate(date) {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
+function getTodayDateString() {
+  return formatDate(new Date())
+}
+
 /**
  * Store for managing daily food entries
  * Handles today's log, totals, and navigation between days
@@ -9,13 +20,7 @@ import { useAuthStore } from './auth'
 export const useDayStore = defineStore('day', {
   state: () => ({
     // Current selected date (YYYY-MM-DD)
-    selectedDate: (() => {
-      const now = new Date()
-      const year = now.getFullYear()
-      const month = String(now.getMonth() + 1).padStart(2, '0')
-      const day = String(now.getDate()).padStart(2, '0')
-      return `${year}-${month}-${day}`
-    })(),
+    selectedDate: getTodayDateString(),
     
     // Current entry for selected date
     currentEntry: null,
@@ -48,12 +53,7 @@ export const useDayStore = defineStore('day', {
      * Is the selected date today?
      */
     isToday: (state) => {
-      const now = new Date()
-      const year = now.getFullYear()
-      const month = String(now.getMonth() + 1).padStart(2, '0')
-      const day = String(now.getDate()).padStart(2, '0')
-      const today = `${year}-${month}-${day}`
-      return state.selectedDate === today
+      return state.selectedDate === getTodayDateString()
     },
 
     /**
@@ -68,6 +68,8 @@ export const useDayStore = defineStore('day', {
         day: 'numeric' 
       })
     },
+
+    canGoForward: (state) => state.selectedDate < getTodayDateString(),
 
     /**
      * Number of items logged today
@@ -352,10 +354,15 @@ export const useDayStore = defineStore('day', {
      * Go to next day
      */
     async nextDay() {
+      if (!this.canGoForward) {
+        return
+      }
+
       const [year, month, day] = this.selectedDate.split('-').map(Number)
       const date = new Date(year, month - 1, day) // month is 0-indexed
       date.setDate(date.getDate() + 1)
-      this.selectedDate = this.formatDate(date)
+      const nextDate = this.formatDate(date)
+      this.selectedDate = nextDate > getTodayDateString() ? getTodayDateString() : nextDate
       await this.loadEntry()
     },
 
@@ -371,17 +378,14 @@ export const useDayStore = defineStore('day', {
      * Format date as YYYY-MM-DD in local timezone
      */
     formatDate(date) {
-      const year = date.getFullYear()
-      const month = String(date.getMonth() + 1).padStart(2, '0')
-      const day = String(date.getDate()).padStart(2, '0')
-      return `${year}-${month}-${day}`
+      return formatDate(date)
     },
 
     /**
      * Set specific date
      */
     async setDate(dateString) {
-      this.selectedDate = dateString
+      this.selectedDate = dateString > getTodayDateString() ? getTodayDateString() : dateString
       await this.loadEntry()
     },
 
@@ -405,4 +409,3 @@ export const useDayStore = defineStore('day', {
     }
   }
 })
-

@@ -5,6 +5,7 @@ import { Capacitor } from '@capacitor/core'
 import { useAuthStore } from '@/stores/auth'
 import { useDayStore } from '@/stores/day'
 import { useFoodStore } from '@/stores/food'
+import { useDaySwipe } from '@/shared/composables/useDaySwipe'
 import { useLocaleRoute } from '@/shared/composables/useLocaleRoute'
 
 const authStore = useAuthStore()
@@ -24,6 +25,7 @@ const statusMessage = ref('')
 const statusTone = ref('neutral')
 const scrollTrigger = ref(null)
 const productSheet = ref(null)
+const servingInput = ref(null)
 const productSheetOffsetY = ref(0)
 const productSheetTransition = ref('transform 0.22s ease')
 
@@ -41,6 +43,11 @@ const calculatedNutrients = computed(() => {
   return foodStore.calculateServingNutrients(selectedProduct.value, servingGrams.value)
 })
 const isOverlayOpen = computed(() => Boolean(selectedProduct.value) || showBrowserScanner.value)
+const { handleTouchStart, handleTouchEnd, handleTouchCancel } = useDaySwipe({
+  onSwipePrevious: () => dayStore.previousDay(),
+  onSwipeNext: () => dayStore.nextDay(),
+  isDisabled: () => isOverlayOpen.value,
+})
 
 watch(
   () => foodStore.hasSearchResults,
@@ -124,6 +131,11 @@ function closeProductSheet() {
   productSheetOffsetY.value = 0
   productSheetTransition.value = 'transform 0.22s ease'
   selectedProduct.value = null
+}
+
+function focusServingInput() {
+  servingInput.value?.focus()
+  servingInput.value?.select?.()
 }
 
 function handleProductSheetTouchStart(event) {
@@ -338,7 +350,12 @@ function setupInfiniteScroll() {
 </script>
 
 <template>
-  <section class="mobile-search">
+  <section
+    class="mobile-search"
+    @touchstart="handleTouchStart"
+    @touchend="handleTouchEnd"
+    @touchcancel="handleTouchCancel"
+  >
     <div class="search-stack">
       <div class="search-panel">
         <label class="field-block">
@@ -450,7 +467,15 @@ function setupInfiniteScroll() {
 
         <label class="sheet-field">
           <span>{{ $t('search.calculator.servingSize') }}</span>
-          <input v-model.number="servingGrams" type="number" min="1" step="1">
+          <div class="serving-input-row">
+            <input ref="servingInput" v-model.number="servingGrams" type="number" min="1" step="1">
+            <button type="button" class="serving-edit-btn" @click="focusServingInput" aria-label="Edit serving size">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+                <path d="M12.085 6.5l5.415 5.415l-8.793 8.792a1 1 0 0 1 -.707 .293h-4a1 1 0 0 1 -1 -1v-4a1 1 0 0 1 .293 -.707zm5.406 -2.698a3.828 3.828 0 0 1 1.716 6.405l-.292 .293l-5.415 -5.415l.293 -.292a3.83 3.83 0 0 1 3.698 -.991" />
+              </svg>
+            </button>
+          </div>
         </label>
 
         <div class="nutrient-grid">
@@ -580,6 +605,7 @@ input:focus {
 .scan-btn,
 .add-btn {
   padding: 1rem;
+  border-radius: 20px;
   background: linear-gradient(135deg, #ffd166 0%, #ef8354 100%);
   color: #18120d;
   font-weight: 700;
@@ -671,7 +697,10 @@ input:focus {
 
 .sheet-backdrop {
   position: fixed;
-  inset: 0;
+  top: var(--mobile-header-height, 0px);
+  right: 0;
+  bottom: 0;
+  left: 0;
   display: flex;
   align-items: flex-end;
   background: rgba(0, 0, 0, 0.55);
@@ -730,6 +759,35 @@ input:focus {
   display: grid;
   gap: 0.45rem;
   margin-top: 1rem;
+}
+
+.serving-input-row {
+  position: relative;
+}
+
+.serving-input-row input {
+  padding-right: 4rem;
+}
+
+.serving-edit-btn {
+  position: absolute;
+  top: 50%;
+  right: 0.7rem;
+  transform: translateY(-50%);
+  width: 2.6rem;
+  height: 2.6rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.9);
+  line-height: 1;
+}
+
+.serving-edit-btn svg {
+  display: block;
 }
 
 .nutrient-grid {

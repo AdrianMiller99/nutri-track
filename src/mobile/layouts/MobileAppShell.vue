@@ -1,10 +1,15 @@
 <script setup>
-import { computed } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
+import { useDayStore } from '@/stores/day'
 import { useLocaleRoute } from '@/shared/composables/useLocaleRoute'
 
 const authStore = useAuthStore()
+const dayStore = useDayStore()
 const { route, router, currentLocale } = useLocaleRoute()
+const mobileHeader = ref(null)
+const { t } = useI18n()
 
 const tabItems = computed(() => [
   { label: 'Today', icon: '◎', to: `/${currentLocale.value}/app/dashboard` },
@@ -12,30 +17,90 @@ const tabItems = computed(() => [
 ])
 
 const showTabBar = computed(() => authStore.user && route.path.includes('/app/'))
-const pageTitle = computed(() => {
-  if (route.path.endsWith('/app/search')) return 'Search'
-  if (route.path.endsWith('/app/dashboard')) return 'Today'
+const pageEyebrow = computed(() => {
+  if (route.path.endsWith('/app/search')) return t('nav.search')
+  if (route.path.endsWith('/app/dashboard')) return t('nav.dashboard')
   if (route.path.endsWith('/auth')) return 'Account'
   return 'Nutri Track'
 })
+
+const pageTitle = computed(() => {
+  if (route.path.includes('/app/')) {
+    return formatHeaderDateLabel(dayStore.selectedDate)
+  }
+
+  if (route.path.endsWith('/auth')) return 'Account'
+  return 'Nutri Track'
+})
+
+function formatHeaderDateLabel(dateString) {
+  const today = getRelativeDateString(0)
+  const yesterday = getRelativeDateString(-1)
+
+  if (dateString === today) {
+    return t('dashboard.today')
+  }
+
+  if (dateString === yesterday) {
+    return t('dashboard.yesterday')
+  }
+
+  const [year, month, day] = dateString.split('-')
+  return `${day}.${month}.${year}`
+}
+
+function getRelativeDateString(dayOffset) {
+  const date = new Date()
+  date.setDate(date.getDate() + dayOffset)
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
 
 async function logout() {
   await authStore.signOut()
   router.push(`/${currentLocale.value}/auth`)
 }
+
+function updateHeaderHeightVar() {
+  const headerHeight = showTabBar.value && mobileHeader.value ? `${mobileHeader.value.offsetHeight}px` : '0px'
+  document.documentElement.style.setProperty('--mobile-header-height', headerHeight)
+}
+
+watch(showTabBar, async () => {
+  await nextTick()
+  updateHeaderHeightVar()
+})
+
+watch(() => route.fullPath, async () => {
+  await nextTick()
+  updateHeaderHeightVar()
+})
+
+onMounted(async () => {
+  await nextTick()
+  updateHeaderHeightVar()
+  window.addEventListener('resize', updateHeaderHeightVar)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('resize', updateHeaderHeightVar)
+  document.documentElement.style.setProperty('--mobile-header-height', '0px')
+})
 </script>
 
 <template>
   <div class="mobile-shell">
-    <header v-if="showTabBar" class="mobile-header">
+    <header v-if="showTabBar" ref="mobileHeader" class="mobile-header">
       <div>
-        <p class="eyebrow">Nutri Track</p>
+        <p class="eyebrow">{{ pageEyebrow }}</p>
         <h1>{{ pageTitle }}</h1>
       </div>
       <button class="header-action" @click="logout">Log out</button>
     </header>
 
-    <main :class="['mobile-main', { 'with-tabbar': showTabBar }]">
+    <main :class="['mobile-main', { 'with-tabbar': showTabBar, 'with-header': showTabBar }]">
       <router-view />
     </main>
 
@@ -63,9 +128,11 @@ async function logout() {
 }
 
 .mobile-header {
-  position: sticky;
+  position: fixed;
   top: 0;
-  z-index: 30;
+  left: 0;
+  right: 0;
+  z-index: 90;
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
@@ -102,6 +169,10 @@ async function logout() {
 
 .mobile-main {
   min-height: 100vh;
+}
+
+.mobile-main.with-header {
+  padding-top: var(--mobile-header-height, 0px);
 }
 
 .mobile-main.with-tabbar {

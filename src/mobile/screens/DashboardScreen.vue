@@ -3,6 +3,7 @@ import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 import { useDayStore } from '@/stores/day'
+import { useDaySwipe } from '@/shared/composables/useDaySwipe'
 import { useLocaleRoute } from '@/shared/composables/useLocaleRoute'
 
 const authStore = useAuthStore()
@@ -25,6 +26,12 @@ const detailRows = computed(() => [
   { label: t('dashboard.totals.sugar'), value: `${dayStore.totals.sugar_g}g` },
   { label: t('dashboard.totals.sodium'), value: `${Math.round(dayStore.totals.sodium_mg)}mg` },
 ])
+
+const { handleTouchStart, handleTouchEnd, handleTouchCancel } = useDaySwipe({
+  onSwipePrevious: () => dayStore.previousDay(),
+  onSwipeNext: () => dayStore.nextDay(),
+  isDisabled: () => Boolean(editingItem.value),
+})
 
 onMounted(async () => {
   if (!authStore.user) {
@@ -63,20 +70,12 @@ async function deleteItem(item) {
 </script>
 
 <template>
-  <section class="mobile-dashboard">
-    <div class="day-strip">
-      <button class="day-nav" @click="dayStore.previousDay()">←</button>
-      <div class="day-summary">
-        <p class="day-eyebrow">{{ dayStore.isToday ? 'Today' : 'Diary day' }}</p>
-        <h2>{{ dayStore.displayDate }}</h2>
-      </div>
-      <button class="day-nav" @click="dayStore.nextDay()">→</button>
-    </div>
-
-    <button v-if="!dayStore.isToday" class="today-chip" @click="dayStore.goToToday()">
-      {{ $t('dashboard.goToToday') }}
-    </button>
-
+  <section
+    class="mobile-dashboard"
+    @touchstart="handleTouchStart"
+    @touchend="handleTouchEnd"
+    @touchcancel="handleTouchCancel"
+  >
     <div v-if="dayStore.loading" class="state-card">{{ $t('dashboard.loadingDay') }}</div>
 
     <template v-else>
@@ -156,7 +155,6 @@ async function deleteItem(item) {
   color: white;
 }
 
-.day-strip,
 .items-card,
 .detail-card {
   background: rgba(255, 255, 255, 0.06);
@@ -165,25 +163,6 @@ async function deleteItem(item) {
   backdrop-filter: blur(18px);
 }
 
-.day-strip {
-  display: grid;
-  grid-template-columns: auto 1fr auto;
-  gap: 0.75rem;
-  align-items: center;
-  padding: 0.8rem;
-}
-
-.day-nav {
-  width: 3rem;
-  height: 3rem;
-  border: none;
-  border-radius: 18px;
-  background: rgba(255, 255, 255, 0.08);
-  color: white;
-  font-size: 1.2rem;
-}
-
-.day-eyebrow,
 .section-eyebrow {
   margin: 0 0 0.25rem;
   color: rgba(255, 214, 138, 0.85);
@@ -192,13 +171,11 @@ async function deleteItem(item) {
   text-transform: uppercase;
 }
 
-.day-summary h2,
 .section-heading h3,
 .sheet h3 {
   margin: 0;
 }
 
-.today-chip,
 .primary-cta {
   width: 100%;
   border: none;
@@ -207,11 +184,6 @@ async function deleteItem(item) {
   margin-top: 0.85rem;
   font: inherit;
   font-weight: 700;
-}
-
-.today-chip {
-  background: rgba(255, 255, 255, 0.08);
-  color: white;
 }
 
 .macro-grid {

@@ -84,6 +84,7 @@
   "dashboard": {
     "title": "Dashboard",
     "today": "Today",
+    "yesterday": "Yesterday",
     "prevDay": "Prev",
     "nextDay": "Next",
     "goToToday": "Go to Today",
@@ -187,4 +188,3 @@
     "addFailed": "Failed to add food"
   }
 }
-
