@@ -1,18 +1,35 @@
 <script setup>
-import { computed, onMounted, ref } from 'vue'
+import { computed, nextTick, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 import { useDayStore } from '@/stores/day'
-import { useDaySwipe } from '@/shared/composables/useDaySwipe'
 import { useLocaleRoute } from '@/shared/composables/useLocaleRoute'
+
+const SWIPE_COMMIT_RATIO = 0.24
+const SWIPE_MIN_DISTANCE = 60
+const SWIPE_TRANSITION = 'transform 260ms cubic-bezier(0.22, 1, 0.36, 1)'
 
 const authStore = useAuthStore()
 const dayStore = useDayStore()
 const { pushLocale } = useLocaleRoute()
 const { t } = useI18n()
 
+const dashboardViewport = ref(null)
 const editingItem = ref(null)
 const editServingGrams = ref(0)
+const touchStartX = ref(null)
+const touchStartY = ref(null)
+const dragX = ref(0)
+const dragDirection = ref(null)
+const panelTransition = ref(SWIPE_TRANSITION)
+const gestureMode = ref('idle')
+const incomingPanelVisible = ref(false)
+const incomingPanelDocked = ref(false)
+const hideCurrentPanel = ref(false)
+
+const skeletonMacroCards = [1, 2, 3, 4]
+const skeletonDetailRows = [1, 2, 3]
+const skeletonItems = [1, 2, 3]
 
 const macroCards = computed(() => [
   { label: t('dashboard.totals.calories'), value: Math.round(dayStore.totals.kcal), unit: 'kcal', tone: 'warm' },
@@ -27,11 +44,31 @@ const detailRows = computed(() => [
   { label: t('dashboard.totals.sodium'), value: `${Math.round(dayStore.totals.sodium_mg)}mg` },
 ])
 
-const { handleTouchStart, handleTouchEnd, handleTouchCancel } = useDaySwipe({
-  onSwipePrevious: () => dayStore.previousDay(),
-  onSwipeNext: () => dayStore.nextDay(),
-  isDisabled: () => Boolean(editingItem.value),
+const viewportWidth = computed(() => dashboardViewport.value?.clientWidth || window.innerWidth || 1)
+const currentPanelStyle = computed(() => ({
+  transform: `translate3d(${dragX.value}px, 0, 0)`,
+  transition: panelTransition.value,
+}))
+const incomingPanelStyle = computed(() => {
+  if (!incomingPanelVisible.value || !dragDirection.value) {
+    return {}
+  }
+
+  let translateX = 0
+  if (incomingPanelDocked.value) {
+    translateX = 0
+  } else if (dragDirection.value === 'previous') {
+    translateX = dragX.value - viewportWidth.value
+  } else {
+    translateX = dragX.value + viewportWidth.value
+  }
+
+  return {
+    transform: `translate3d(${translateX}px, 0, 0)`,
+    transition: panelTransition.value,
+  }
 })
+const isInteractionDisabled = computed(() => Boolean(editingItem.value) || dayStore.savingItem)
 
 onMounted(async () => {
   if (!authStore.user) {
@@ -67,70 +104,397 @@ async function deleteItem(item) {
   if (!confirmed) return
   await dayStore.deleteItem(item.id)
 }
+
+function isInteractiveTarget(target) {
+  return Boolean(target?.closest('input, textarea, button, a, label, select, [data-no-day-swipe]'))
+}
+
+function resetSwipeState() {
+  touchStartX.value = null
+  touchStartY.value = null
+  dragX.value = 0
+  dragDirection.value = null
+  gestureMode.value = 'idle'
+  incomingPanelVisible.value = false
+  incomingPanelDocked.value = false
+  panelTransition.value = SWIPE_TRANSITION
+}
+
+function normalizeSettledPanel() {
+  if (!incomingPanelVisible.value || !incomingPanelDocked.value || !hideCurrentPanel.value) {
+    return
+  }
+
+  panelTransition.value = 'none'
+  dragX.value = 0
+  hideCurrentPanel.value = false
+  incomingPanelVisible.value = false
+  incomingPanelDocked.value = false
+  dragDirection.value = null
+}
+
+function snapBack() {
+  gestureMode.value = 'settling'
+  panelTransition.value = SWIPE_TRANSITION
+  dragX.value = 0
+  incomingPanelVisible.value = false
+  incomingPanelDocked.value = false
+  window.setTimeout(() => {
+    if (gestureMode.value === 'settling') {
+      resetSwipeState()
+    }
+  }, 260)
+}
+
+async function commitSwipe(direction) {
+  const isNext = direction === 'next'
+  if (isNext && !dayStore.canGoForward) {
+    snapBack()
+    return
+  }
+
+  gestureMode.value = 'settling'
+  panelTransition.value = SWIPE_TRANSITION
+  incomingPanelVisible.value = true
+  incomingPanelDocked.value = false
+  dragDirection.value = direction
+  dragX.value = direction === 'previous' ? viewportWidth.value : -viewportWidth.value
+
+  const navigationPromise = direction === 'previous' ? dayStore.previousDay() : dayStore.nextDay()
+
+  try {
+    await Promise.all([
+      navigationPromise,
+      new Promise((resolve) => window.setTimeout(resolve, 260)),
+    ])
+  } finally {
+    hideCurrentPanel.value = true
+    incomingPanelDocked.value = true
+    panelTransition.value = 'none'
+    dragX.value = 0
+    touchStartX.value = null
+    touchStartY.value = null
+    gestureMode.value = 'idle'
+  }
+}
+
+function handleSwipeStart(event) {
+  if (isInteractionDisabled.value || dayStore.loading) return
+  normalizeSettledPanel()
+  if (isInteractiveTarget(event.target)) {
+    resetSwipeState()
+    return
+  }
+
+  const touch = event.touches[0]
+  touchStartX.value = touch.clientX
+  touchStartY.value = touch.clientY
+  gestureMode.value = 'pending'
+  panelTransition.value = 'none'
+}
+
+function handleSwipeMove(event) {
+  if (touchStartX.value === null || touchStartY.value === null) {
+    return
+  }
+
+  const touch = event.touches[0]
+  const deltaX = touch.clientX - touchStartX.value
+  const deltaY = touch.clientY - touchStartY.value
+
+  if (gestureMode.value === 'pending') {
+    if (Math.abs(deltaX) < 10 && Math.abs(deltaY) < 10) {
+      return
+    }
+
+    if (Math.abs(deltaX) <= Math.abs(deltaY) * 1.1) {
+      gestureMode.value = 'vertical'
+      return
+    }
+
+    gestureMode.value = 'horizontal'
+  }
+
+  if (gestureMode.value !== 'horizontal') {
+    return
+  }
+
+  let nextDragX = deltaX
+  if (nextDragX < 0 && !dayStore.canGoForward) {
+    nextDragX *= 0.18
+  }
+
+  const maxDistance = viewportWidth.value * 0.92
+  nextDragX = Math.max(-maxDistance, Math.min(maxDistance, nextDragX))
+
+  dragX.value = nextDragX
+  dragDirection.value = nextDragX >= 0 ? 'previous' : 'next'
+  incomingPanelVisible.value = Math.abs(nextDragX) > 0
+  incomingPanelDocked.value = false
+
+  if (event.cancelable) {
+    event.preventDefault()
+  }
+}
+
+async function handleSwipeEnd() {
+  if (gestureMode.value !== 'horizontal') {
+    resetSwipeState()
+    return
+  }
+
+  const distance = Math.abs(dragX.value)
+  const threshold = Math.max(SWIPE_MIN_DISTANCE, viewportWidth.value * SWIPE_COMMIT_RATIO)
+  const direction = dragX.value >= 0 ? 'previous' : 'next'
+
+  if (distance < threshold) {
+    snapBack()
+    return
+  }
+
+  await commitSwipe(direction)
+}
+
+function handleSwipeCancel() {
+  if (gestureMode.value === 'horizontal') {
+    snapBack()
+    return
+  }
+
+  resetSwipeState()
+}
 </script>
 
 <template>
   <section
+    ref="dashboardViewport"
     class="mobile-dashboard"
-    @touchstart="handleTouchStart"
-    @touchend="handleTouchEnd"
-    @touchcancel="handleTouchCancel"
+    @touchstart="handleSwipeStart"
+    @touchmove="handleSwipeMove"
+    @touchend="handleSwipeEnd"
+    @touchcancel="handleSwipeCancel"
   >
-    <div v-if="dayStore.loading" class="state-card">{{ $t('dashboard.loadingDay') }}</div>
+    <div class="dashboard-swipe-shell">
+      <div
+        v-if="incomingPanelVisible"
+        class="dashboard-panel incoming-panel"
+        :style="incomingPanelStyle"
+      >
+        <template v-if="dayStore.loading">
+          <div class="dashboard-skeleton">
+            <div class="macro-grid">
+              <article v-for="card in skeletonMacroCards" :key="card" class="skeleton-card macro">
+                <div class="skeleton-line short"></div>
+                <div class="skeleton-line tall"></div>
+              </article>
+            </div>
 
-    <template v-else>
-      <div class="macro-grid">
-        <article v-for="card in macroCards" :key="card.label" :class="['macro-card', card.tone]">
-          <p>{{ card.label }}</p>
-          <strong>{{ card.value }}<span>{{ card.unit }}</span></strong>
-        </article>
+            <section class="detail-card">
+              <div v-for="row in skeletonDetailRows" :key="row" class="detail-row">
+                <div class="skeleton-line medium"></div>
+                <div class="skeleton-line short"></div>
+              </div>
+            </section>
+
+            <div class="primary-cta skeleton-block"></div>
+
+            <section class="items-card">
+              <div class="section-heading">
+                <div class="section-copy">
+                  <div class="skeleton-line short"></div>
+                  <div class="skeleton-line medium"></div>
+                </div>
+                <div class="count-pill skeleton-pill"></div>
+              </div>
+
+              <div class="items-list">
+                <article v-for="item in skeletonItems" :key="item" class="item-card skeleton-item-card">
+                  <div class="item-image skeleton-block"></div>
+                  <div class="item-copy">
+                    <div class="skeleton-line medium"></div>
+                    <div class="skeleton-line short"></div>
+                    <div class="skeleton-line medium"></div>
+                  </div>
+                </article>
+              </div>
+            </section>
+          </div>
+        </template>
+
+        <template v-else>
+          <div class="macro-grid">
+            <article v-for="card in macroCards" :key="`incoming-${card.label}`" :class="['macro-card', card.tone]">
+              <p>{{ card.label }}</p>
+              <strong>{{ card.value }}<span>{{ card.unit }}</span></strong>
+            </article>
+          </div>
+
+          <section class="detail-card">
+            <div class="detail-row" v-for="row in detailRows" :key="`incoming-${row.label}`">
+              <span>{{ row.label }}</span>
+              <strong>{{ row.value }}</strong>
+            </div>
+          </section>
+
+          <button class="primary-cta" @click="openAddFood">{{ $t('dashboard.addFood') }}</button>
+
+          <section class="items-card">
+            <div class="section-heading">
+              <div>
+                <p class="section-eyebrow">Logged</p>
+                <h3>{{ $t('dashboard.loggedFoods') }}</h3>
+              </div>
+              <span class="count-pill">{{ dayStore.itemCount }}</span>
+            </div>
+
+            <div v-if="dayStore.itemsLoading" class="items-list">
+              <article v-for="item in skeletonItems" :key="`incoming-skeleton-${item}`" class="item-card skeleton-item-card">
+                <div class="item-image skeleton-block"></div>
+                <div class="item-copy">
+                  <div class="skeleton-line medium"></div>
+                  <div class="skeleton-line short"></div>
+                  <div class="skeleton-line medium"></div>
+                </div>
+              </article>
+            </div>
+            <div v-else-if="!dayStore.hasItems" class="empty-card">
+              <p>{{ $t('dashboard.noItems') }}</p>
+              <small>{{ $t('dashboard.addFoodHint') }}</small>
+            </div>
+
+            <div v-else class="items-list">
+              <article v-for="item in dayStore.items" :key="`incoming-item-${item.id}`" class="item-card">
+                <img v-if="item.image_url" :src="item.image_url" :alt="item.label" class="item-image">
+                <div class="item-copy">
+                  <strong>{{ item.label }}</strong>
+                  <span v-if="item.brand">{{ item.brand }}</span>
+                  <small>{{ item.serving_grams }}g · {{ Math.round(item.kcal) }} kcal</small>
+                </div>
+                <div class="item-macros">
+                  <span>P {{ item.protein_g }}g</span>
+                  <span>C {{ item.carb_g }}g</span>
+                  <span>F {{ item.fat_g }}g</span>
+                </div>
+                <div class="item-actions">
+                  <button @click="startEdit(item)">Edit</button>
+                  <button class="danger" @click="deleteItem(item)">Delete</button>
+                </div>
+              </article>
+            </div>
+          </section>
+        </template>
       </div>
 
-      <section class="detail-card">
-        <div class="detail-row" v-for="row in detailRows" :key="row.label">
-          <span>{{ row.label }}</span>
-          <strong>{{ row.value }}</strong>
-        </div>
-      </section>
+      <div
+        class="dashboard-panel current-panel"
+        :class="{ 'panel-hidden': hideCurrentPanel }"
+        :style="currentPanelStyle"
+      >
+        <template v-if="dayStore.loading">
+          <div class="dashboard-skeleton">
+            <div class="macro-grid">
+              <article v-for="card in skeletonMacroCards" :key="card" class="skeleton-card macro">
+                <div class="skeleton-line short"></div>
+                <div class="skeleton-line tall"></div>
+              </article>
+            </div>
 
-      <button class="primary-cta" @click="openAddFood">{{ $t('dashboard.addFood') }}</button>
+            <section class="detail-card">
+              <div v-for="row in skeletonDetailRows" :key="row" class="detail-row">
+                <div class="skeleton-line medium"></div>
+                <div class="skeleton-line short"></div>
+              </div>
+            </section>
 
-      <section class="items-card">
-        <div class="section-heading">
-          <div>
-            <p class="section-eyebrow">Logged</p>
-            <h3>{{ $t('dashboard.loggedFoods') }}</h3>
+            <div class="primary-cta skeleton-block"></div>
+
+            <section class="items-card">
+              <div class="section-heading">
+                <div class="section-copy">
+                  <div class="skeleton-line short"></div>
+                  <div class="skeleton-line medium"></div>
+                </div>
+                <div class="count-pill skeleton-pill"></div>
+              </div>
+
+              <div class="items-list">
+                <article v-for="item in skeletonItems" :key="item" class="item-card skeleton-item-card">
+                  <div class="item-image skeleton-block"></div>
+                  <div class="item-copy">
+                    <div class="skeleton-line medium"></div>
+                    <div class="skeleton-line short"></div>
+                    <div class="skeleton-line medium"></div>
+                  </div>
+                </article>
+              </div>
+            </section>
           </div>
-          <span class="count-pill">{{ dayStore.itemCount }}</span>
-        </div>
+        </template>
 
-        <div v-if="dayStore.itemsLoading" class="state-card inner">{{ $t('dashboard.loadingItems') }}</div>
-        <div v-else-if="!dayStore.hasItems" class="empty-card">
-          <p>{{ $t('dashboard.noItems') }}</p>
-          <small>{{ $t('dashboard.addFoodHint') }}</small>
-        </div>
+        <template v-else>
+          <div class="macro-grid">
+            <article v-for="card in macroCards" :key="card.label" :class="['macro-card', card.tone]">
+              <p>{{ card.label }}</p>
+              <strong>{{ card.value }}<span>{{ card.unit }}</span></strong>
+            </article>
+          </div>
 
-        <div v-else class="items-list">
-          <article v-for="item in dayStore.items" :key="item.id" class="item-card">
-            <img v-if="item.image_url" :src="item.image_url" :alt="item.label" class="item-image">
-            <div class="item-copy">
-              <strong>{{ item.label }}</strong>
-              <span v-if="item.brand">{{ item.brand }}</span>
-              <small>{{ item.serving_grams }}g · {{ Math.round(item.kcal) }} kcal</small>
+          <section class="detail-card">
+            <div class="detail-row" v-for="row in detailRows" :key="row.label">
+              <span>{{ row.label }}</span>
+              <strong>{{ row.value }}</strong>
             </div>
-            <div class="item-macros">
-              <span>P {{ item.protein_g }}g</span>
-              <span>C {{ item.carb_g }}g</span>
-              <span>F {{ item.fat_g }}g</span>
+          </section>
+
+          <button class="primary-cta" @click="openAddFood">{{ $t('dashboard.addFood') }}</button>
+
+          <section class="items-card">
+            <div class="section-heading">
+              <div>
+                <p class="section-eyebrow">Logged</p>
+                <h3>{{ $t('dashboard.loggedFoods') }}</h3>
+              </div>
+              <span class="count-pill">{{ dayStore.itemCount }}</span>
             </div>
-            <div class="item-actions">
-              <button @click="startEdit(item)">Edit</button>
-              <button class="danger" @click="deleteItem(item)">Delete</button>
+
+            <div v-if="dayStore.itemsLoading" class="items-list">
+              <article v-for="item in skeletonItems" :key="item" class="item-card skeleton-item-card">
+                <div class="item-image skeleton-block"></div>
+                <div class="item-copy">
+                  <div class="skeleton-line medium"></div>
+                  <div class="skeleton-line short"></div>
+                  <div class="skeleton-line medium"></div>
+                </div>
+              </article>
             </div>
-          </article>
-        </div>
-      </section>
-    </template>
+            <div v-else-if="!dayStore.hasItems" class="empty-card">
+              <p>{{ $t('dashboard.noItems') }}</p>
+              <small>{{ $t('dashboard.addFoodHint') }}</small>
+            </div>
+
+            <div v-else class="items-list">
+              <article v-for="item in dayStore.items" :key="item.id" class="item-card">
+                <img v-if="item.image_url" :src="item.image_url" :alt="item.label" class="item-image">
+                <div class="item-copy">
+                  <strong>{{ item.label }}</strong>
+                  <span v-if="item.brand">{{ item.brand }}</span>
+                  <small>{{ item.serving_grams }}g · {{ Math.round(item.kcal) }} kcal</small>
+                </div>
+                <div class="item-macros">
+                  <span>P {{ item.protein_g }}g</span>
+                  <span>C {{ item.carb_g }}g</span>
+                  <span>F {{ item.fat_g }}g</span>
+                </div>
+                <div class="item-actions">
+                  <button @click="startEdit(item)">Edit</button>
+                  <button class="danger" @click="deleteItem(item)">Delete</button>
+                </div>
+              </article>
+            </div>
+          </section>
+        </template>
+      </div>
+    </div>
 
     <div v-if="editingItem" class="sheet-backdrop" @click="closeEdit">
       <div class="sheet" @click.stop>
@@ -153,6 +517,35 @@ async function deleteItem(item) {
 .mobile-dashboard {
   padding: 1rem;
   color: white;
+  overflow: hidden;
+}
+
+.dashboard-swipe-shell {
+  position: relative;
+  min-height: 60vh;
+  overflow: hidden;
+}
+
+.dashboard-panel {
+  width: 100%;
+  will-change: transform;
+}
+
+.incoming-panel {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.current-panel {
+  position: relative;
+  z-index: 2;
+}
+
+.panel-hidden {
+  visibility: hidden;
+  pointer-events: none;
 }
 
 .items-card,
@@ -193,7 +586,8 @@ async function deleteItem(item) {
   margin-top: 0.85rem;
 }
 
-.macro-card {
+.macro-card,
+.skeleton-card {
   padding: 1rem;
   border-radius: 24px;
   color: white;
@@ -228,6 +622,7 @@ async function deleteItem(item) {
 .detail-row {
   display: flex;
   justify-content: space-between;
+  align-items: center;
   padding: 0.7rem 0;
   color: rgba(255, 255, 255, 0.78);
 }
@@ -259,24 +654,24 @@ async function deleteItem(item) {
 
 .items-list {
   display: grid;
-  gap: 0.8rem;
+  gap: 0.75rem;
 }
 
 .item-card {
   display: grid;
   grid-template-columns: auto 1fr;
-  gap: 0.9rem;
-  padding: 0.9rem;
+  gap: 0.85rem;
+  padding: 0.95rem;
   border-radius: 22px;
   background: rgba(255, 255, 255, 0.04);
 }
 
 .item-image {
-  width: 4rem;
-  height: 4rem;
+  width: 4.25rem;
+  height: 4.25rem;
   border-radius: 16px;
   object-fit: cover;
-  background: rgba(255, 255, 255, 0.06);
+  background: rgba(255, 255, 255, 0.08);
 }
 
 .item-copy {
@@ -285,51 +680,138 @@ async function deleteItem(item) {
 }
 
 .item-copy span,
-.item-copy small,
-.item-macros {
+.item-copy small {
   color: rgba(255, 255, 255, 0.68);
 }
 
 .item-macros {
+  grid-column: 2;
   display: flex;
-  flex-wrap: wrap;
-  gap: 0.65rem;
-  margin-top: 0.35rem;
-  font-size: 0.88rem;
+  gap: 0.7rem;
+  color: rgba(255, 255, 255, 0.74);
+  font-size: 0.9rem;
 }
 
 .item-actions {
+  grid-column: 2;
   display: flex;
-  gap: 0.6rem;
-  margin-top: 0.75rem;
+  gap: 0.75rem;
+}
+
+.item-actions button,
+.sheet-actions button,
+.sheet label input {
+  font: inherit;
 }
 
 .item-actions button {
   border: none;
-  border-radius: 14px;
-  padding: 0.75rem 0.95rem;
+  border-radius: 16px;
+  padding: 0.8rem 0.95rem;
   background: rgba(255, 255, 255, 0.08);
   color: white;
-  font: inherit;
 }
 
 .item-actions .danger {
-  background: rgba(255, 97, 97, 0.14);
-  color: #ffadad;
+  color: #ff9e9e;
+  background: rgba(255, 95, 95, 0.12);
 }
 
-.state-card,
 .empty-card {
-  padding: 1.1rem;
-  text-align: center;
+  padding: 1rem;
   border-radius: 20px;
   background: rgba(255, 255, 255, 0.04);
+  text-align: center;
+}
+
+.empty-card p {
+  margin: 0;
 }
 
 .empty-card small {
   display: block;
-  margin-top: 0.45rem;
-  color: rgba(255, 255, 255, 0.6);
+  margin-top: 0.35rem;
+  color: rgba(255, 255, 255, 0.66);
+}
+
+.dashboard-skeleton {
+  pointer-events: none;
+}
+
+.skeleton-card,
+.skeleton-block,
+.skeleton-line,
+.skeleton-pill,
+.skeleton-item-card {
+  position: relative;
+  overflow: hidden;
+}
+
+.skeleton-card,
+.skeleton-item-card,
+.skeleton-pill,
+.skeleton-block,
+.skeleton-line {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.skeleton-card.macro {
+  min-height: 0;
+}
+
+.skeleton-line {
+  border-radius: 999px;
+}
+
+.skeleton-line.short {
+  width: 36%;
+  height: 0.72rem;
+}
+
+.skeleton-line.medium {
+  width: 62%;
+  height: 0.8rem;
+}
+
+.skeleton-line.tall {
+  width: 52%;
+  height: 1.85rem;
+  margin-top: 0.95rem;
+}
+
+.skeleton-block {
+  min-height: 3.4rem;
+}
+
+.skeleton-pill {
+  width: 2.4rem;
+  min-height: 2rem;
+}
+
+.section-copy {
+  display: grid;
+  gap: 0.4rem;
+}
+
+.skeleton-item-card .item-image {
+  min-height: 4.25rem;
+}
+
+.skeleton-item-card .item-copy {
+  align-content: center;
+}
+
+.skeleton-card::after,
+.skeleton-block::after,
+.skeleton-line::after,
+.skeleton-pill::after,
+.skeleton-item-card::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.16), transparent);
+  animation: skeleton-shimmer 1.4s ease-in-out infinite;
 }
 
 .sheet-backdrop {
@@ -338,7 +820,7 @@ async function deleteItem(item) {
   display: flex;
   align-items: flex-end;
   background: rgba(0, 0, 0, 0.55);
-  z-index: 60;
+  z-index: 70;
 }
 
 .sheet {
@@ -354,28 +836,30 @@ async function deleteItem(item) {
   margin-top: 1rem;
 }
 
-.sheet input {
+.sheet label span {
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.sheet label input {
+  width: 100%;
   border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 18px;
-  padding: 1rem;
   background: rgba(255, 255, 255, 0.05);
   color: white;
-  font: inherit;
+  padding: 1rem;
 }
 
 .sheet-actions {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
+  display: flex;
   gap: 0.75rem;
   margin-top: 1rem;
 }
 
 .sheet-actions button {
+  flex: 1;
   border: none;
   border-radius: 18px;
-  padding: 1rem;
-  font: inherit;
-  font-weight: 700;
+  padding: 0.95rem 1rem;
 }
 
 .sheet-actions .ghost {
@@ -384,7 +868,13 @@ async function deleteItem(item) {
 }
 
 .sheet-actions .save {
-  background: #ffffff;
-  color: #121212;
+  background: linear-gradient(135deg, #ffd166 0%, #ef8354 100%);
+  color: #16110d;
+}
+
+@keyframes skeleton-shimmer {
+  100% {
+    transform: translateX(100%);
+  }
 }
 </style>

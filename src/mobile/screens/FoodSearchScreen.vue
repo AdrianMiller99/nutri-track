@@ -31,6 +31,7 @@ const servingInput = ref(null)
 const productSheetOffsetY = ref(0)
 const productSheetTransition = ref('transform 0.22s ease')
 const showListPicker = ref(false)
+const searchSkeletonCards = [1, 2, 3, 4]
 
 let searchTimeout = null
 let intersectionObserver = null
@@ -457,8 +458,15 @@ function setupInfiniteScroll() {
           <small v-if="foodStore.searchTotalCount > 0">of {{ foodStore.searchTotalCount }}</small>
         </div>
 
-        <div v-if="foodStore.searchLoading && !foodStore.hasSearchResults" class="state-card">
-          {{ $t('search.loading') }}
+        <div v-if="foodStore.searchLoading && !foodStore.hasSearchResults" class="product-list">
+          <article v-for="card in searchSkeletonCards" :key="card" class="product-card skeleton-product-card">
+            <div class="product-image skeleton-block"></div>
+            <div class="product-copy">
+              <div class="skeleton-line medium"></div>
+              <div class="skeleton-line short"></div>
+              <div class="skeleton-line long"></div>
+            </div>
+          </article>
         </div>
         <div v-else-if="!foodStore.hasSearchResults" class="state-card">
           Start typing to search Open Food Facts.
@@ -484,7 +492,16 @@ function setupInfiniteScroll() {
             </div>
           </article>
 
-          <div v-if="foodStore.searchLoadingMore" class="state-card">Loading more…</div>
+          <div v-if="foodStore.searchLoadingMore" class="product-list loading-more-list">
+            <article v-for="card in 2" :key="card" class="product-card skeleton-product-card">
+              <div class="product-image skeleton-block"></div>
+              <div class="product-copy">
+                <div class="skeleton-line medium"></div>
+                <div class="skeleton-line short"></div>
+                <div class="skeleton-line long"></div>
+              </div>
+            </article>
+          </div>
           <div ref="scrollTrigger" class="scroll-trigger"></div>
         </div>
       </section>
@@ -794,6 +811,57 @@ input:focus {
   background: rgba(255, 255, 255, 0.04);
 }
 
+.loading-more-list {
+  margin-top: 0.75rem;
+}
+
+.skeleton-product-card,
+.skeleton-block,
+.skeleton-line {
+  position: relative;
+  overflow: hidden;
+}
+
+.skeleton-product-card,
+.skeleton-block,
+.skeleton-line {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.skeleton-line {
+  border-radius: 999px;
+}
+
+.skeleton-line.medium {
+  width: 58%;
+  height: 0.8rem;
+}
+
+.skeleton-line.short {
+  width: 34%;
+  height: 0.72rem;
+}
+
+.skeleton-line.long {
+  width: 82%;
+  height: 0.72rem;
+}
+
+.skeleton-product-card .product-copy {
+  align-content: center;
+}
+
+.skeleton-product-card::after,
+.skeleton-block::after,
+.skeleton-line::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.16), transparent);
+  animation: skeleton-shimmer 1.4s ease-in-out infinite;
+}
+
 .scroll-trigger {
   height: 1px;
 }
@@ -983,5 +1051,11 @@ input:focus {
 :global(body.mobile-sheet-open) {
   overflow: hidden;
   overscroll-behavior: none;
+}
+
+@keyframes skeleton-shimmer {
+  100% {
+    transform: translateX(100%);
+  }
 }
 </style>
