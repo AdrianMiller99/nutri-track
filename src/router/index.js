@@ -39,6 +39,10 @@ const router = createRouter({
           component: () => import('@/views/Auth.vue'),
         },
         {
+          path: 'auth/reset-password',
+          component: () => import('@/views/ResetPassword.vue'),
+        },
+        {
           path: 'app/dashboard',
           component: () => import('@/views/Dashboard.vue'),
           meta: { requiresAuth: true },
@@ -48,6 +52,11 @@ const router = createRouter({
           name: 'FoodSearch',
           component: FoodSearch,
           meta: { requiresAuth: true }
+        },
+        {
+          path: 'app/lists',
+          component: () => import('@/views/Lists.vue'),
+          meta: { requiresAuth: true },
         }
       ]
     },
@@ -72,23 +81,34 @@ const router = createRouter({
 router.beforeEach((to) => {
   const auth = useAuthStore()
   const locale = to.params.locale || getInitialLocale()
-  
-  // Update i18n locale based on URL
-  if (to.params.locale && supportedLocales.includes(to.params.locale)) {
-    if (i18n.global.locale.value !== to.params.locale) {
-      i18n.global.locale.value = to.params.locale
+  const isResetPasswordRoute = to.path.endsWith('/auth/reset-password')
+  const isAuthEntryRoute = to.path.endsWith('/auth')
+  const isLocaleHomeRoute = to.path === `/${locale}`
+
+  return auth.ensureInitialized().then(() => {
+    // Update i18n locale based on URL
+    if (to.params.locale && supportedLocales.includes(to.params.locale)) {
+      if (i18n.global.locale.value !== to.params.locale) {
+        i18n.global.locale.value = to.params.locale
+      }
     }
-  }
-  
-  // Redirect to auth if route requires authentication and user is not logged in
-  if (to.meta.requiresAuth && !auth.user) {
-    return `/${locale}/auth`
-  }
-  
-  // Redirect to dashboard if logged in user visits auth page
-  if (to.path.endsWith('/auth') && auth.user) {
-    return `/${locale}/app/dashboard`
-  }
+
+    // Redirect to auth if route requires authentication and user is not logged in
+    if (to.meta.requiresAuth && !auth.user) {
+      return `/${locale}/auth`
+    }
+
+    // Allow password reset for both request and recovery states.
+    if (isResetPasswordRoute) {
+      return true
+    }
+
+    if (auth.user && (isAuthEntryRoute || isLocaleHomeRoute)) {
+      return `/${locale}/app/dashboard`
+    }
+
+    return true
+  })
 })
 
 export default router

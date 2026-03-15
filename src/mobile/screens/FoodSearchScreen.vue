@@ -1,0 +1,1179 @@
+<script setup>
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
+import { BarcodeScanner } from '@capacitor-mlkit/barcode-scanning'
+import { Capacitor } from '@capacitor/core'
+import { useI18n } from 'vue-i18n'
+import { useAuthStore } from '@/stores/auth'
+import { useDayStore } from '@/stores/day'
+import { useFoodStore } from '@/stores/food'
+import { useListsStore } from '@/stores/lists'
+import { useDaySwipe } from '@/shared/composables/useDaySwipe'
+import { useLocaleRoute } from '@/shared/composables/useLocaleRoute'
+
+const authStore = useAuthStore()
+const { t } = useI18n()
+const dayStore = useDayStore()
+const foodStore = useFoodStore()
+const listsStore = useListsStore()
+const { localePath, pushLocale, route, router } = useLocaleRoute()
+
+const query = ref('')
+const barcode = ref('')
+const manualBarcode = ref('')
+const selectedProduct = ref(null)
+const servingGrams = ref(100)
+const scanning = ref(false)
+const showManualBarcode = ref(false)
+const showBrowserScanner = ref(false)
+const statusMessage = ref('')
+const statusTone = ref('neutral')
+const scrollTrigger = ref(null)
+const productSheet = ref(null)
+const servingInput = ref(null)
+const productSheetOffsetY = ref(0)
+const productSheetTransition = ref('transform 0.22s ease')
+const showListPicker = ref(false)
+const searchSkeletonCards = [1, 2, 3, 4]
+
+let searchTimeout = null
+let intersectionObserver = null
+let barcodeDetector = null
+let videoStream = null
+let statusTimeout = null
+let productSheetStartY = 0
+let productSheetStartScrollTop = 0
+let productSheetDragging = false
+
+const calculatedNutrients = computed(() => {
+  if (!selectedProduct.value) return {}
+  return foodStore.calculateServingNutrients(selectedProduct.value, servingGrams.value)
+})
+const targetListId = computed(() => (typeof route.query.list === 'string' ? route.query.list : ''))
+const targetList = computed(() => listsStore.getListById(targetListId.value))
+const isOverlayOpen = computed(() => Boolean(selectedProduct.value) || showBrowserScanner.value || showListPicker.value)
+const { handleTouchStart, handleTouchEnd, handleTouchCancel } = useDaySwipe({
+  onSwipePrevious: () => dayStore.previousDay(),
+  onSwipeNext: () => dayStore.nextDay(),
+  isDisabled: () => isOverlayOpen.value,
+})
+
+watch(
+  () => foodStore.hasSearchResults,
+  (hasResults) => {
+    if (hasResults) {
+      nextTick(setupInfiniteScroll)
+      return
+    }
+
+    if (intersectionObserver) {
+      intersectionObserver.disconnect()
+      intersectionObserver = null
+    }
+  }
+)
+
+watch(isOverlayOpen, (isOpen) => {
+  toggleBodyScrollLock(isOpen)
+})
+
+watch(
+  () => authStore.user?.id,
+  (userId) => {
+    listsStore.syncWithUser(userId)
+  },
+  { immediate: true }
+)
+
+onMounted(async () => {
+  if (!authStore.user) {
+    pushLocale('/auth')
+    return
+  }
+
+  if (!dayStore.currentEntry) {
+    await dayStore.loadEntry()
+  }
+})
+
+onUnmounted(() => {
+  clearTimeout(searchTimeout)
+  clearTimeout(statusTimeout)
+  if (intersectionObserver) {
+    intersectionObserver.disconnect()
+  }
+  toggleBodyScrollLock(false)
+  stopBrowserScanner()
+})
+
+function toggleBodyScrollLock(isLocked) {
+  document.documentElement.classList.toggle('mobile-sheet-open', isLocked)
+  document.body.classList.toggle('mobile-sheet-open', isLocked)
+}
+
+function setStatus(message, tone = 'neutral') {
+  statusMessage.value = message
+  statusTone.value = tone
+  clearTimeout(statusTimeout)
+  statusTimeout = setTimeout(() => {
+    statusMessage.value = ''
+  }, 3000)
+}
+
+function handleSearch() {
+  clearTimeout(searchTimeout)
+  searchTimeout = setTimeout(() => {
+    if (query.value.trim()) {
+      foodStore.search(query.value)
+      return
+    }
+
+    foodStore.clearSearch()
+  }, 250)
+}
+
+function clearSearch() {
+  query.value = ''
+  foodStore.clearSearch()
+}
+
+function selectProduct(product) {
+  selectedProduct.value = product
+  servingGrams.value = product.serving_quantity || 100
+  productSheetOffsetY.value = 0
+  productSheetTransition.value = 'transform 0.22s ease'
+  showListPicker.value = false
+}
+
+function closeProductSheet() {
+  productSheetOffsetY.value = 0
+  productSheetTransition.value = 'transform 0.22s ease'
+  showListPicker.value = false
+  selectedProduct.value = null
+}
+
+function focusServingInput() {
+  servingInput.value?.focus()
+  servingInput.value?.select?.()
+}
+
+function handleProductSheetTouchStart(event) {
+  if (!productSheet.value) return
+
+  productSheetStartY = event.touches[0].clientY
+  productSheetStartScrollTop = productSheet.value.scrollTop
+  productSheetDragging = false
+  productSheetTransition.value = 'none'
+}
+
+function handleProductSheetTouchMove(event) {
+  if (!productSheet.value) return
+
+  const currentY = event.touches[0].clientY
+  const deltaY = currentY - productSheetStartY
+
+  if (deltaY <= 0) {
+    return
+  }
+
+  if (productSheetStartScrollTop > 0 || productSheet.value.scrollTop > 0) {
+    return
+  }
+
+  productSheetDragging = true
+  productSheetOffsetY.value = deltaY
+
+  if (event.cancelable) {
+    event.preventDefault()
+  }
+}
+
+function handleProductSheetTouchEnd() {
+  if (!productSheetDragging) {
+    productSheetTransition.value = 'transform 0.22s ease'
+    return
+  }
+
+  productSheetTransition.value = 'transform 0.22s ease'
+
+  if (productSheetOffsetY.value > 140) {
+    productSheetOffsetY.value = window.innerHeight
+    window.setTimeout(() => {
+      closeProductSheet()
+    }, 180)
+  } else {
+    productSheetOffsetY.value = 0
+  }
+
+  productSheetDragging = false
+}
+
+async function addToLog() {
+  if (!selectedProduct.value || servingGrams.value <= 0) return
+
+  try {
+    await dayStore.addItem(selectedProduct.value, servingGrams.value, calculatedNutrients.value)
+    setStatus(t('search.messages.addedToDiary', { name: selectedProduct.value.name }), 'success')
+    closeProductSheet()
+  } catch (error) {
+    setStatus(error.message, 'error')
+  }
+}
+
+function openListPicker() {
+  if (!listsStore.hasLists) {
+    openListsScreen()
+    return
+  }
+
+  showListPicker.value = true
+}
+
+function closeListPicker() {
+  showListPicker.value = false
+}
+
+function openListsScreen() {
+  router.push({ path: localePath('/app/lists') })
+  closeProductSheet()
+}
+
+async function addToList(listId) {
+  if (!selectedProduct.value || servingGrams.value <= 0) return
+
+  try {
+    const list = listsStore.getListById(listId)
+    if (!list) {
+      throw new Error(t('lists.errors.notFound'))
+    }
+
+    listsStore.addItemToList(listId, selectedProduct.value, servingGrams.value, calculatedNutrients.value)
+    setStatus(t('search.messages.savedToList', { name: selectedProduct.value.name, list: list.name }), 'success')
+    closeProductSheet()
+  } catch (error) {
+    setStatus(error.message, 'error')
+  }
+}
+
+async function lookupBarcode() {
+  if (!barcode.value) return
+  const product = await foodStore.getProduct(barcode.value)
+  if (product) {
+    selectProduct(product)
+    return
+  }
+
+  setStatus(foodStore.productError || t('search.errors.productNotFound'), 'error')
+}
+
+async function handleScannedBarcode(scannedBarcode) {
+  barcode.value = scannedBarcode
+  await lookupBarcode()
+}
+
+async function scanBarcode() {
+  scanning.value = true
+
+  if (Capacitor.isNativePlatform()) {
+    await scanBarcodeNative()
+  } else {
+    await scanBarcodeBrowser()
+  }
+}
+
+async function scanBarcodeNative() {
+  try {
+    const { camera } = await BarcodeScanner.checkPermissions()
+
+    if (camera === 'denied') {
+      setStatus(t('search.errors.cameraAccessDisabled'), 'error')
+      return
+    }
+
+    if (camera !== 'granted') {
+      const permission = await BarcodeScanner.requestPermissions()
+      if (permission.camera !== 'granted') {
+        setStatus(t('search.errors.cameraPermissionNotGranted'), 'error')
+        return
+      }
+    }
+
+    document.body.classList.add('barcode-scanner-active')
+    const result = await BarcodeScanner.scan()
+    document.body.classList.remove('barcode-scanner-active')
+
+    if (result.barcodes?.length) {
+      await handleScannedBarcode(result.barcodes[0].rawValue)
+    }
+  } catch (error) {
+    document.body.classList.remove('barcode-scanner-active')
+    setStatus(error.message, 'error')
+  } finally {
+    scanning.value = false
+  }
+}
+
+async function scanBarcodeBrowser() {
+  try {
+    if (!('BarcodeDetector' in window)) {
+      showManualBarcode.value = true
+      setStatus(t('search.scanner.unavailableHere'), 'error')
+      return
+    }
+
+    showBrowserScanner.value = true
+    await nextTick()
+
+    const supportedFormats = await BarcodeDetector.getSupportedFormats()
+    const formats = supportedFormats.filter((format) =>
+      ['ean_13', 'ean_8', 'upc_a', 'upc_e', 'code_128', 'code_39'].includes(format)
+    )
+
+    barcodeDetector = new BarcodeDetector({ formats })
+
+    const video = document.getElementById('mobile-barcode-video')
+    videoStream = await navigator.mediaDevices.getUserMedia({
+      video: {
+        facingMode: { ideal: 'environment' },
+      },
+    })
+
+    video.srcObject = videoStream
+    await video.play()
+
+    scanFrame(video)
+  } catch (error) {
+    setStatus(t('search.errors.scannerError', { message: error.message }), 'error')
+    await stopBrowserScanner()
+  } finally {
+    scanning.value = false
+  }
+}
+
+async function scanFrame(video) {
+  if (!barcodeDetector || !videoStream) return
+
+  try {
+    const barcodes = await barcodeDetector.detect(video)
+    if (barcodes.length > 0) {
+      await stopBrowserScanner()
+      await handleScannedBarcode(barcodes[0].rawValue)
+      return
+    }
+  } catch (error) {
+    if (error.name !== 'NotSupportedError') {
+      console.debug(error.message)
+    }
+  }
+
+  requestAnimationFrame(() => scanFrame(video))
+}
+
+async function stopBrowserScanner() {
+  if (videoStream) {
+    videoStream.getTracks().forEach((track) => track.stop())
+    videoStream = null
+  }
+
+  const video = document.getElementById('mobile-barcode-video')
+  if (video) {
+    video.srcObject = null
+  }
+
+  barcodeDetector = null
+  showBrowserScanner.value = false
+  scanning.value = false
+}
+
+function setupInfiniteScroll() {
+  if (intersectionObserver) {
+    intersectionObserver.disconnect()
+  }
+
+  if (!scrollTrigger.value) return
+
+  intersectionObserver = new IntersectionObserver((entries) => {
+    const first = entries[0]
+    if (first.isIntersecting && foodStore.searchHasMore && !foodStore.searchLoadingMore) {
+      foodStore.loadMore()
+    }
+  }, { rootMargin: '240px' })
+
+  intersectionObserver.observe(scrollTrigger.value)
+}
+</script>
+
+<template>
+  <section
+    class="mobile-search"
+    @touchstart="handleTouchStart"
+    @touchend="handleTouchEnd"
+    @touchcancel="handleTouchCancel"
+  >
+    <div class="search-stack">
+      <div class="search-panel">
+        <label class="field-block">
+          <span>{{ $t('search.mobile.searchProducts') }}</span>
+          <div class="field-row">
+            <input
+              v-model="query"
+              type="text"
+              :placeholder="$t('search.searchPlaceholder')"
+              @input="handleSearch"
+            >
+            <button v-if="query" type="button" class="field-clear-btn danger-icon-btn" :aria-label="$t('search.clear')" @click="clearSearch">
+              <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                <path d="M7.05 5.99a.75.75 0 0 1 1.06 0l3.89 3.9l3.89 -3.9a.75.75 0 1 1 1.06 1.06l-3.9 3.89l3.9 3.89a.75.75 0 0 1 -1.06 1.06l-3.89 -3.9l-3.89 3.9a.75.75 0 0 1 -1.06 -1.06l3.9 -3.89l-3.9 -3.89a.75.75 0 0 1 0 -1.06z" />
+              </svg>
+            </button>
+          </div>
+        </label>
+
+        <div class="action-grid">
+          <button class="scan-btn" @click="scanBarcode" :disabled="scanning">
+            {{ scanning ? $t('search.scanning') : $t('search.scanBarcode') }}
+          </button>
+          <button class="ghost-btn" @click="showManualBarcode = !showManualBarcode">
+            {{ showManualBarcode ? $t('search.mobile.hideCodeInput') : $t('search.scanner.manualEntry') }}
+          </button>
+        </div>
+
+        <div v-if="showManualBarcode" class="manual-code">
+          <div class="manual-code-row">
+            <div class="manual-input-wrap field-row">
+              <input
+                v-model="barcode"
+                type="text"
+                :placeholder="$t('search.barcodePlaceholder')"
+                @keyup.enter="lookupBarcode"
+              >
+              <button v-if="barcode" type="button" class="field-clear-btn danger-icon-btn" :aria-label="$t('search.clear')" @click="barcode = ''">
+                <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                  <path d="M7.05 5.99a.75.75 0 0 1 1.06 0l3.89 3.9l3.89 -3.9a.75.75 0 1 1 1.06 1.06l-3.9 3.89l3.9 3.89a.75.75 0 0 1 -1.06 1.06l-3.89 -3.9l-3.89 3.9a.75.75 0 0 1 -1.06 -1.06l3.9 -3.89l-3.9 -3.89a.75.75 0 0 1 0 -1.06z" />
+                </svg>
+              </button>
+            </div>
+            <button type="button" class="lookup-btn compact-icon-btn" :aria-label="$t('search.lookup')" @click="lookupBarcode">
+              <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+                <path d="M10 4a6 6 0 1 0 3.874 10.582l4.272 4.273a1 1 0 0 0 1.415 -1.415l-4.273 -4.272a6 6 0 0 0 -5.288 -9.168zm0 2a4 4 0 1 1 0 8a4 4 0 0 1 0 -8z" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <p v-if="statusMessage" :class="['status-banner', statusTone]">{{ statusMessage }}</p>
+      <p v-if="foodStore.searchError || foodStore.productError" class="status-banner error">
+        {{ foodStore.searchError || foodStore.productError }}
+      </p>
+
+      <section class="results-section">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">{{ $t('search.results') }}</p>
+            <h2>{{ foodStore.searchResults.length }}</h2>
+          </div>
+          <small v-if="foodStore.searchTotalCount > 0">{{ $t('search.of') }} {{ foodStore.searchTotalCount }}</small>
+        </div>
+
+        <div v-if="foodStore.searchLoading && !foodStore.hasSearchResults" class="product-list">
+          <article v-for="card in searchSkeletonCards" :key="card" class="product-card skeleton-product-card">
+            <div class="product-image skeleton-block"></div>
+            <div class="product-copy">
+              <div class="skeleton-line medium"></div>
+              <div class="skeleton-line short"></div>
+              <div class="skeleton-line long"></div>
+            </div>
+          </article>
+        </div>
+        <div v-else-if="!foodStore.hasSearchResults" class="state-card">
+          {{ $t('search.mobile.startTyping') }}
+        </div>
+
+        <div v-else class="product-list">
+          <article
+            v-for="product in foodStore.searchResults"
+            :key="product.code"
+            class="product-card"
+            @click="selectProduct(product)"
+          >
+            <img v-if="product.image_url" :src="product.image_url" :alt="product.name" class="product-image">
+            <div class="product-copy">
+              <strong>{{ product.name }}</strong>
+              <span>{{ product.brand || $t('search.product.brand') }}</span>
+              <small>
+                {{ product.nutriments.energy_kcal }} kcal ·
+                P {{ product.nutriments.proteins }}g ·
+                C {{ product.nutriments.carbohydrates }}g ·
+                F {{ product.nutriments.fat }}g
+              </small>
+            </div>
+          </article>
+
+          <div v-if="foodStore.searchLoadingMore" class="product-list loading-more-list">
+            <article v-for="card in 2" :key="card" class="product-card skeleton-product-card">
+              <div class="product-image skeleton-block"></div>
+              <div class="product-copy">
+                <div class="skeleton-line medium"></div>
+                <div class="skeleton-line short"></div>
+                <div class="skeleton-line long"></div>
+              </div>
+            </article>
+          </div>
+          <div ref="scrollTrigger" class="scroll-trigger"></div>
+        </div>
+      </section>
+    </div>
+
+    <Transition name="product-sheet-transition">
+      <div v-if="selectedProduct" class="sheet-backdrop" @click="closeProductSheet">
+        <div class="sheet-motion-shell">
+          <div
+            ref="productSheet"
+            class="sheet"
+            :style="{
+              transform: `translateY(${productSheetOffsetY}px)`,
+              transition: productSheetTransition,
+            }"
+            @click.stop
+            @touchstart="handleProductSheetTouchStart"
+            @touchmove="handleProductSheetTouchMove"
+            @touchend="handleProductSheetTouchEnd"
+            @touchcancel="handleProductSheetTouchEnd"
+          >
+            <div class="sheet-header">
+              <div>
+                <p class="eyebrow">{{ $t('search.mobile.addToDiary') }}</p>
+                <h3>{{ selectedProduct.name }}</h3>
+                <span>{{ selectedProduct.brand }}</span>
+              </div>
+              <button class="close-btn" @click="closeProductSheet">×</button>
+            </div>
+
+            <img v-if="selectedProduct.image_url" :src="selectedProduct.image_url" :alt="selectedProduct.name" class="sheet-image">
+
+            <label class="sheet-field">
+              <span>{{ $t('search.calculator.servingSize') }}</span>
+              <div class="serving-input-row">
+                <input ref="servingInput" v-model.number="servingGrams" type="number" min="1" step="1">
+                <button type="button" class="serving-edit-btn" @click="focusServingInput" :aria-label="$t('dashboard.editServing.title')">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                    <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+                    <path d="M12.085 6.5l5.415 5.415l-8.793 8.792a1 1 0 0 1 -.707 .293h-4a1 1 0 0 1 -1 -1v-4a1 1 0 0 1 .293 -.707zm5.406 -2.698a3.828 3.828 0 0 1 1.716 6.405l-.292 .293l-5.415 -5.415l.293 -.292a3.83 3.83 0 0 1 3.698 -.991" />
+                  </svg>
+                </button>
+              </div>
+            </label>
+
+            <div class="nutrient-grid">
+              <div>
+                <span>Kcal</span>
+                <strong>{{ calculatedNutrients.energy_kcal }}</strong>
+              </div>
+              <div>
+                <span>{{ $t('search.nutrients.protein') }}</span>
+                <strong>{{ calculatedNutrients.proteins }}g</strong>
+              </div>
+              <div>
+                <span>{{ $t('search.nutrients.carbohydrates') }}</span>
+                <strong>{{ calculatedNutrients.carbohydrates }}g</strong>
+              </div>
+              <div>
+                <span>{{ $t('search.nutrients.fat') }}</span>
+                <strong>{{ calculatedNutrients.fat }}g</strong>
+              </div>
+            </div>
+
+            <div class="sheet-actions">
+              <button class="add-btn" @click="addToLog">{{ $t('search.addButton', { grams: servingGrams }) }}</button>
+              <button
+                v-if="targetList"
+                class="secondary-btn"
+                @click="addToList(targetList.id)"
+              >
+                {{ $t('search.mobile.addToList', { grams: servingGrams, list: targetList.name }) }}
+              </button>
+              <button
+                v-else-if="listsStore.hasLists"
+                class="secondary-btn"
+                @click="openListPicker"
+              >
+                {{ $t('search.mobile.addToListCta') }}
+              </button>
+              <button
+                v-else
+                class="secondary-btn"
+                @click="openListsScreen"
+              >
+                {{ $t('search.mobile.createListFirst') }}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </Transition>
+
+    <Transition name="sheet-transition">
+      <div v-if="showListPicker" class="sheet-backdrop nested" @click="closeListPicker">
+        <div class="sheet picker-sheet" @click.stop>
+          <div class="sheet-header">
+            <div>
+              <p class="eyebrow">{{ $t('search.mobile.chooseList') }}</p>
+              <h3>{{ $t('search.mobile.saveProduct', { name: selectedProduct?.name }) }}</h3>
+            </div>
+            <button class="close-btn" @click="closeListPicker">×</button>
+          </div>
+
+          <div class="list-picker-grid">
+            <button
+              v-for="list in listsStore.lists"
+              :key="list.id"
+              class="list-picker-btn"
+              @click="addToList(list.id)"
+            >
+              <strong>{{ list.name }}</strong>
+              <span>{{ $t('lists.itemCount', { count: list.items.length }) }}</span>
+            </button>
+          </div>
+
+          <button class="secondary-btn manage-btn" @click="openListsScreen">{{ $t('lists.manage') }}</button>
+        </div>
+      </div>
+    </Transition>
+
+    <Transition name="sheet-transition">
+      <div v-if="showBrowserScanner" class="sheet-backdrop" @click="stopBrowserScanner">
+        <div class="sheet" @click.stop>
+          <div class="sheet-header">
+            <div>
+              <p class="eyebrow">{{ $t('search.mobile.scannerEyebrow') }}</p>
+              <h3>{{ $t('search.scanner.title') }}</h3>
+            </div>
+            <button class="close-btn" @click="stopBrowserScanner">×</button>
+          </div>
+          <div class="video-shell">
+            <video id="mobile-barcode-video" autoplay playsinline></video>
+          </div>
+          <label class="sheet-field">
+            <span>{{ $t('search.scanner.manualEntry') }}</span>
+            <input v-model="manualBarcode" type="text" :placeholder="$t('search.barcodePlaceholder')" @keyup.enter="handleScannedBarcode(manualBarcode)">
+          </label>
+        </div>
+      </div>
+    </Transition>
+  </section>
+</template>
+
+<style scoped>
+.mobile-search {
+  padding: 1rem;
+  color: white;
+}
+
+.search-stack {
+  display: grid;
+  gap: 0.9rem;
+}
+
+.search-panel,
+.results-section {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 26px;
+  padding: 1rem;
+  backdrop-filter: blur(18px);
+}
+
+.field-block span,
+.eyebrow,
+.sheet-field span {
+  display: block;
+  margin-bottom: 0.45rem;
+  color: rgba(255, 214, 138, 0.85);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.field-row {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+input {
+  flex: 1;
+  width: 100%;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.05);
+  color: white;
+  padding: 1rem;
+  font: inherit;
+}
+
+.field-row input {
+  padding-right: 4rem;
+}
+
+input:focus {
+  outline: none;
+  border-color: rgba(255, 209, 102, 0.7);
+}
+
+.icon-btn,
+.lookup-btn,
+.scan-btn,
+.ghost-btn,
+.add-btn,
+.close-btn,
+.secondary-btn,
+.list-picker-btn {
+  border: none;
+  font: inherit;
+}
+
+.icon-btn,
+.lookup-btn,
+.ghost-btn,
+.secondary-btn,
+.list-picker-btn {
+  padding: 0.95rem 1rem;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.08);
+  color: white;
+}
+
+.danger-icon-btn {
+  background: rgba(255, 95, 95, 0.16);
+  color: #ff9e9e;
+}
+
+.field-clear-btn {
+  position: absolute;
+  top: 50%;
+  right: 0.65rem;
+  transform: translateY(-50%);
+  width: 2.5rem;
+  height: 2.5rem;
+  border: none;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+
+.action-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+  margin-top: 0.9rem;
+}
+
+.scan-btn,
+.add-btn {
+  padding: 1rem;
+  border-radius: 20px;
+  background: linear-gradient(135deg, #ffd166 0%, #ef8354 100%);
+  color: #18120d;
+  font-weight: 700;
+}
+
+.manual-code {
+  margin-top: 0.85rem;
+}
+
+.manual-code-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  column-gap: 0.8rem;
+}
+
+.manual-input-wrap {
+  min-width: 0;
+}
+
+.manual-input-wrap input {
+  padding-right: 4rem;
+}
+
+.compact-icon-btn {
+  width: 3.1rem;
+  height: 3.1rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+
+.status-banner {
+  margin: 0;
+  padding: 0.95rem 1rem;
+  border-radius: 18px;
+  font-size: 0.92rem;
+}
+
+.status-banner.success {
+  background: rgba(80, 200, 120, 0.12);
+  color: #9fe1a9;
+}
+
+.status-banner.error {
+  background: rgba(255, 95, 95, 0.12);
+  color: #ffadad;
+}
+
+.results-section h2,
+.sheet h3 {
+  margin: 0;
+}
+
+.section-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 1rem;
+  margin-bottom: 0.8rem;
+}
+
+.section-head small {
+  color: rgba(255, 255, 255, 0.65);
+}
+
+.product-list {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.product-card {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.8rem;
+  align-items: center;
+  padding: 0.9rem;
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.product-image {
+  width: 4.25rem;
+  height: 4.25rem;
+  border-radius: 16px;
+  object-fit: contain;
+  background: rgba(255, 255, 255, 0.05);
+  padding: 0.4rem;
+}
+
+.product-copy {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.product-copy span,
+.product-copy small {
+  color: rgba(255, 255, 255, 0.68);
+  line-height: 1.4;
+}
+
+.state-card {
+  padding: 1rem;
+  text-align: center;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.loading-more-list {
+  margin-top: 0.75rem;
+}
+
+.skeleton-product-card,
+.skeleton-block,
+.skeleton-line {
+  position: relative;
+  overflow: hidden;
+}
+
+.skeleton-product-card,
+.skeleton-block,
+.skeleton-line {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.skeleton-line {
+  border-radius: 999px;
+}
+
+.skeleton-line.medium {
+  width: 58%;
+  height: 0.8rem;
+}
+
+.skeleton-line.short {
+  width: 34%;
+  height: 0.72rem;
+}
+
+.skeleton-line.long {
+  width: 82%;
+  height: 0.72rem;
+}
+
+.skeleton-product-card .product-copy {
+  align-content: center;
+}
+
+.skeleton-product-card::after,
+.skeleton-block::after,
+.skeleton-line::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.16), transparent);
+  animation: skeleton-shimmer 1.4s ease-in-out infinite;
+}
+
+.scroll-trigger {
+  height: 1px;
+}
+
+.sheet-backdrop {
+  position: fixed;
+  top: var(--mobile-header-height, 0px);
+  right: 0;
+  bottom: 0;
+  left: 0;
+  display: flex;
+  align-items: flex-end;
+  background: rgba(0, 0, 0, 0.55);
+  overscroll-behavior: contain;
+  z-index: 60;
+}
+
+.sheet-backdrop.nested {
+  z-index: 70;
+  background: rgba(0, 0, 0, 0.35);
+}
+
+.sheet-motion-shell {
+  width: 100%;
+  display: flex;
+  align-items: flex-end;
+}
+
+.sheet {
+  width: 100%;
+  max-height: 88vh;
+  overflow: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
+  padding: 1.25rem 1rem calc(env(safe-area-inset-bottom, 0px) + 1rem);
+  background: #17151c;
+  border-radius: 28px 28px 0 0;
+}
+
+.sheet-transition-enter-active,
+.sheet-transition-leave-active,
+.product-sheet-transition-enter-active,
+.product-sheet-transition-leave-active {
+  transition: opacity 0.24s ease;
+}
+
+.sheet-transition-enter-active .sheet,
+.sheet-transition-leave-active .sheet {
+  transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.24s ease;
+}
+
+.product-sheet-transition-enter-active .sheet-motion-shell,
+.product-sheet-transition-leave-active .sheet-motion-shell {
+  transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.24s ease;
+}
+
+.sheet-transition-enter-from,
+.sheet-transition-leave-to,
+.product-sheet-transition-enter-from,
+.product-sheet-transition-leave-to {
+  opacity: 0;
+}
+
+.sheet-transition-enter-from .sheet,
+.sheet-transition-leave-to .sheet,
+.product-sheet-transition-enter-from .sheet-motion-shell,
+.product-sheet-transition-leave-to .sheet-motion-shell {
+  transform: translateY(1.5rem);
+  opacity: 0;
+}
+
+.picker-sheet {
+  max-height: 72vh;
+}
+
+.sheet-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.sheet-header span {
+  color: rgba(255, 255, 255, 0.64);
+}
+
+.close-btn {
+  flex: 0 0 auto;
+  width: 3rem;
+  height: 3rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+  font-size: 1.9rem;
+  line-height: 1;
+}
+
+.sheet-image {
+  width: 100%;
+  max-height: 180px;
+  object-fit: contain;
+  margin-top: 1rem;
+  padding: 1rem;
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.sheet-field {
+  display: grid;
+  gap: 0.45rem;
+  margin-top: 1rem;
+}
+
+.serving-input-row {
+  position: relative;
+}
+
+.serving-input-row input {
+  padding-right: 4rem;
+}
+
+.serving-edit-btn {
+  position: absolute;
+  top: 50%;
+  right: 0.7rem;
+  transform: translateY(-50%);
+  width: 2.6rem;
+  height: 2.6rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.9);
+  line-height: 1;
+}
+
+.serving-edit-btn svg {
+  display: block;
+}
+
+.nutrient-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.nutrient-grid div {
+  padding: 0.85rem;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.nutrient-grid span {
+  display: block;
+  color: rgba(255, 255, 255, 0.65);
+  font-size: 0.82rem;
+}
+
+.nutrient-grid strong {
+  display: block;
+  margin-top: 0.35rem;
+  font-size: 1.15rem;
+}
+
+.sheet-actions {
+  display: grid;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.add-btn,
+.secondary-btn {
+  width: 100%;
+}
+
+.manage-btn {
+  background: linear-gradient(135deg, #ffd166 0%, #ef8354 100%);
+  color: #18120d;
+  font-weight: 700;
+}
+
+.list-picker-grid {
+  display: grid;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.list-picker-btn {
+  display: grid;
+  gap: 0.2rem;
+  text-align: left;
+}
+
+.list-picker-btn span {
+  color: rgba(255, 255, 255, 0.66);
+}
+
+.manage-btn {
+  margin-top: 0.9rem;
+}
+
+.video-shell {
+  border-radius: 24px;
+  overflow: hidden;
+  background: black;
+  margin-top: 1rem;
+}
+
+.video-shell video {
+  width: 100%;
+  display: block;
+}
+
+:global(body.barcode-scanner-active) {
+  background: transparent;
+  visibility: hidden;
+}
+
+:global(body.barcode-scanner-active .mobile-search) {
+  visibility: hidden;
+}
+
+:global(html.mobile-sheet-open),
+:global(body.mobile-sheet-open) {
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
+@keyframes skeleton-shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+</style>

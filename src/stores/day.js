@@ -2,6 +2,37 @@ import { defineStore } from 'pinia'
 import { supabase } from '@/lib/supabaseClient'
 import { useAuthStore } from './auth'
 
+function formatDate(date) {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
+function getTodayDateString() {
+  return formatDate(new Date())
+}
+
+function buildEntryItemRecord(entryId, item) {
+  return {
+    entry_id: entryId,
+    product_code: item.product_code || null,
+    label: item.label,
+    brand: item.brand || null,
+    image_url: item.image_url || null,
+    serving_grams: item.serving_grams,
+    quantity: 1,
+    kcal: item.kcal || 0,
+    protein_g: item.protein_g || 0,
+    carb_g: item.carb_g || 0,
+    fat_g: item.fat_g || 0,
+    fiber_g: item.fiber_g || 0,
+    sugar_g: item.sugar_g || 0,
+    sodium_mg: item.sodium_mg || 0,
+    meal_type: null,
+  }
+}
+
 /**
  * Store for managing daily food entries
  * Handles today's log, totals, and navigation between days
@@ -9,13 +40,7 @@ import { useAuthStore } from './auth'
 export const useDayStore = defineStore('day', {
   state: () => ({
     // Current selected date (YYYY-MM-DD)
-    selectedDate: (() => {
-      const now = new Date()
-      const year = now.getFullYear()
-      const month = String(now.getMonth() + 1).padStart(2, '0')
-      const day = String(now.getDate()).padStart(2, '0')
-      return `${year}-${month}-${day}`
-    })(),
+    selectedDate: getTodayDateString(),
     
     // Current entry for selected date
     currentEntry: null,
@@ -48,12 +73,7 @@ export const useDayStore = defineStore('day', {
      * Is the selected date today?
      */
     isToday: (state) => {
-      const now = new Date()
-      const year = now.getFullYear()
-      const month = String(now.getMonth() + 1).padStart(2, '0')
-      const day = String(now.getDate()).padStart(2, '0')
-      const today = `${year}-${month}-${day}`
-      return state.selectedDate === today
+      return state.selectedDate === getTodayDateString()
     },
 
     /**
@@ -69,6 +89,8 @@ export const useDayStore = defineStore('day', {
       })
     },
 
+    canGoForward: (state) => state.selectedDate < getTodayDateString(),
+
     /**
      * Number of items logged today
      */
@@ -81,6 +103,43 @@ export const useDayStore = defineStore('day', {
   },
 
   actions: {
+    async getOrCreateEntryForDate(dateString) {
+      const authStore = useAuthStore()
+      if (!authStore.user) {
+        throw new Error('User not authenticated')
+      }
+
+      const { data: existingEntry, error: fetchError } = await supabase
+        .from('entries')
+        .select('*')
+        .eq('user_id', authStore.user.id)
+        .eq('date', dateString)
+        .single()
+
+      if (fetchError && fetchError.code !== 'PGRST116') {
+        throw fetchError
+      }
+
+      if (existingEntry) {
+        return existingEntry
+      }
+
+      const { data: newEntry, error: createError } = await supabase
+        .from('entries')
+        .insert({
+          user_id: authStore.user.id,
+          date: dateString,
+        })
+        .select()
+        .single()
+
+      if (createError) {
+        throw createError
+      }
+
+      return newEntry
+    },
+
     /**
      * Load or create entry for selected date
      */
@@ -95,35 +154,7 @@ export const useDayStore = defineStore('day', {
       this.error = null
 
       try {
-        // Try to fetch existing entry
-        const { data: existingEntry, error: fetchError } = await supabase
-          .from('entries')
-          .select('*')
-          .eq('user_id', authStore.user.id)
-          .eq('date', this.selectedDate)
-          .single()
-
-        if (fetchError && fetchError.code !== 'PGRST116') {
-          // PGRST116 = not found, which is okay
-          throw fetchError
-        }
-
-        if (existingEntry) {
-          this.currentEntry = existingEntry
-        } else {
-          // Create new entry for this date
-          const { data: newEntry, error: createError } = await supabase
-            .from('entries')
-            .insert({
-              user_id: authStore.user.id,
-              date: this.selectedDate
-            })
-            .select()
-            .single()
-
-          if (createError) throw createError
-          this.currentEntry = newEntry
-        }
+        this.currentEntry = await this.getOrCreateEntryForDate(this.selectedDate)
 
         // Load items for this entry
         await this.loadItems()
@@ -230,6 +261,41 @@ export const useDayStore = defineStore('day', {
         throw error
       } finally {
         this.savingItem = false
+      }
+    },
+
+    async addSavedItemsToDate(savedItems, dateString) {
+      const targetDate = dateString > getTodayDateString() ? getTodayDateString() : dateString
+
+      if (!Array.isArray(savedItems) || savedItems.length === 0) {
+        throw new Error('No items to add')
+      }
+
+      this.error = null
+
+      try {
+        const entry = await this.getOrCreateEntryForDate(targetDate)
+        const itemPayload = savedItems.map((item) => buildEntryItemRecord(entry.id, item))
+
+        const { data, error } = await supabase
+          .from('entry_items')
+          .insert(itemPayload)
+          .select()
+
+        if (error) {
+          throw error
+        }
+
+        if (this.selectedDate === targetDate) {
+          this.currentEntry = entry
+          await this.loadItems()
+        }
+
+        return data || []
+      } catch (error) {
+        console.error('Error adding saved items to date:', error)
+        this.error = error.message
+        throw error
       }
     },
 
@@ -352,10 +418,15 @@ export const useDayStore = defineStore('day', {
      * Go to next day
      */
     async nextDay() {
+      if (!this.canGoForward) {
+        return
+      }
+
       const [year, month, day] = this.selectedDate.split('-').map(Number)
       const date = new Date(year, month - 1, day) // month is 0-indexed
       date.setDate(date.getDate() + 1)
-      this.selectedDate = this.formatDate(date)
+      const nextDate = this.formatDate(date)
+      this.selectedDate = nextDate > getTodayDateString() ? getTodayDateString() : nextDate
       await this.loadEntry()
     },
 
@@ -371,17 +442,14 @@ export const useDayStore = defineStore('day', {
      * Format date as YYYY-MM-DD in local timezone
      */
     formatDate(date) {
-      const year = date.getFullYear()
-      const month = String(date.getMonth() + 1).padStart(2, '0')
-      const day = String(date.getDate()).padStart(2, '0')
-      return `${year}-${month}-${day}`
+      return formatDate(date)
     },
 
     /**
      * Set specific date
      */
     async setDate(dateString) {
-      this.selectedDate = dateString
+      this.selectedDate = dateString > getTodayDateString() ? getTodayDateString() : dateString
       await this.loadEntry()
     },
 
@@ -405,4 +473,3 @@ export const useDayStore = defineStore('day', {
     }
   }
 })
-

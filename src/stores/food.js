@@ -198,6 +198,23 @@ export const useFoodStore = defineStore('food', {
       this.productError = null
     },
 
+    clearState() {
+      this.searchQuery = ''
+      this.searchResults = []
+      this.searchLoading = false
+      this.searchError = null
+      this.searchPage = 1
+      this.searchTotalCount = 0
+      this.searchPageSize = 24
+      this.searchHasMore = true
+      this.searchLoadingMore = false
+      this.currentProduct = null
+      this.productLoading = false
+      this.productError = null
+      this.cacheHits = 0
+      this.cacheMisses = 0
+    },
+
     // ===== PRIVATE CACHE METHODS =====
 
     /**
@@ -362,4 +379,3 @@ export const useFoodStore = defineStore('food', {
     }
   }
 })
-
