@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { useLocaleRoute } from '@/shared/composables/useLocaleRoute'
+import logoUrl from '@/assets/logo.svg'
 
 const authStore = useAuthStore()
 const { route, router, currentLocale } = useLocaleRoute()
@@ -26,7 +27,10 @@ function switchLocale(newLocale) {
     <nav v-if="showNav" class="navbar">
       <div class="nav-container">
         <router-link :to="`/${currentLocale}`" class="logo-link">
-          <h1 class="logo">🍎 {{ $t('app.name') }}</h1>
+          <h1 class="logo">
+            <img :src="logoUrl" alt="NutriTrack logo" class="logo-mark">
+            <span>{{ $t('app.name') }}</span>
+          </h1>
         </router-link>
 
         <div class="nav-links">
@@ -97,13 +101,20 @@ function switchLocale(newLocale) {
 }
 
 .logo {
+  align-items: center;
+  color: white;
+  display: inline-flex;
   font-size: 1.5rem;
+  gap: 0.75rem;
   margin: 0;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
   font-weight: 700;
+}
+
+.logo-mark {
+  display: block;
+  flex: 0 0 auto;
+  height: 2.5rem;
+  width: 2.5rem;
 }
 
 .nav-links {

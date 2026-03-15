@@ -1,5 +1,7 @@
 <script setup>
 import { useRouter } from 'vue-router'
+import logoUrl from '@/assets/logo.svg'
+
 const router = useRouter()
 </script>
 
@@ -17,7 +19,9 @@ const router = useRouter()
       <div class="container">
         <!-- Glass Card -->
         <div class="glass-card">
-          <div class="logo">🍎</div>
+          <div class="logo">
+            <img :src="logoUrl" alt="NutriTrack logo" class="logo-mark">
+          </div>
           <h1 class="title">{{ $t('app.name') }}</h1>
           <p class="subtitle">
             {{ $t('home.subtitle') }}
@@ -217,9 +221,17 @@ const router = useRouter()
 }
 
 .logo {
-  font-size: 5rem;
+  display: flex;
+  justify-content: center;
   margin-bottom: 1rem;
   animation: bounce 2s infinite;
+}
+
+.logo-mark {
+  display: block;
+  filter: drop-shadow(0 18px 30px rgba(0, 0, 0, 0.28));
+  height: 8rem;
+  width: 8rem;
 }
 
 @keyframes bounce {
@@ -427,6 +439,11 @@ const router = useRouter()
 
   .title {
     font-size: 2.5rem;
+  }
+
+  .logo-mark {
+    height: 6.5rem;
+    width: 6.5rem;
   }
 
   .subtitle {
