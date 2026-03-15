@@ -420,11 +420,9 @@ function setupInfiniteScroll() {
               :placeholder="$t('search.searchPlaceholder')"
               @input="handleSearch"
             >
-            <button v-if="query" class="icon-btn danger-icon-btn" :aria-label="$t('search.clear')" @click="clearSearch">
+            <button v-if="query" type="button" class="field-clear-btn danger-icon-btn" :aria-label="$t('search.clear')" @click="clearSearch">
               <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
-                <path d="M18 6l-12 12" />
-                <path d="M6 6l12 12" />
+                <path d="M7.05 5.99a.75.75 0 0 1 1.06 0l3.89 3.9l3.89 -3.9a.75.75 0 1 1 1.06 1.06l-3.9 3.89l3.9 3.89a.75.75 0 0 1 -1.06 1.06l-3.89 -3.9l-3.89 3.9a.75.75 0 0 1 -1.06 -1.06l3.9 -3.89l-3.9 -3.89a.75.75 0 0 1 0 -1.06z" />
               </svg>
             </button>
           </div>
@@ -440,14 +438,26 @@ function setupInfiniteScroll() {
         </div>
 
         <div v-if="showManualBarcode" class="manual-code">
-          <div class="field-row">
-            <input
-              v-model="barcode"
-              type="text"
-              :placeholder="$t('search.barcodePlaceholder')"
-              @keyup.enter="lookupBarcode"
-            >
-            <button class="lookup-btn" @click="lookupBarcode">{{ $t('search.lookup') }}</button>
+          <div class="manual-code-row">
+            <div class="manual-input-wrap field-row">
+              <input
+                v-model="barcode"
+                type="text"
+                :placeholder="$t('search.barcodePlaceholder')"
+                @keyup.enter="lookupBarcode"
+              >
+              <button v-if="barcode" type="button" class="field-clear-btn danger-icon-btn" :aria-label="$t('search.clear')" @click="barcode = ''">
+                <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                  <path d="M7.05 5.99a.75.75 0 0 1 1.06 0l3.89 3.9l3.89 -3.9a.75.75 0 1 1 1.06 1.06l-3.9 3.89l3.9 3.89a.75.75 0 0 1 -1.06 1.06l-3.89 -3.9l-3.89 3.9a.75.75 0 0 1 -1.06 -1.06l3.9 -3.89l-3.9 -3.89a.75.75 0 0 1 0 -1.06z" />
+                </svg>
+              </button>
+            </div>
+            <button type="button" class="lookup-btn compact-icon-btn" :aria-label="$t('search.lookup')" @click="lookupBarcode">
+              <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+                <path d="M10 4a6 6 0 1 0 3.874 10.582l4.272 4.273a1 1 0 0 0 1.415 -1.415l-4.273 -4.272a6 6 0 0 0 -5.288 -9.168zm0 2a4 4 0 1 1 0 8a4 4 0 0 1 0 -8z" />
+              </svg>
+            </button>
           </div>
         </div>
       </div>
@@ -515,134 +525,142 @@ function setupInfiniteScroll() {
       </section>
     </div>
 
-    <div v-if="selectedProduct" class="sheet-backdrop" @click="closeProductSheet">
-      <div
-        ref="productSheet"
-        class="sheet"
-        :style="{
-          transform: `translateY(${productSheetOffsetY}px)`,
-          transition: productSheetTransition,
-        }"
-        @click.stop
-        @touchstart="handleProductSheetTouchStart"
-        @touchmove="handleProductSheetTouchMove"
-        @touchend="handleProductSheetTouchEnd"
-        @touchcancel="handleProductSheetTouchEnd"
-      >
-        <div class="sheet-header">
-          <div>
-            <p class="eyebrow">{{ $t('search.mobile.addToDiary') }}</p>
-            <h3>{{ selectedProduct.name }}</h3>
-            <span>{{ selectedProduct.brand }}</span>
+    <Transition name="product-sheet-transition">
+      <div v-if="selectedProduct" class="sheet-backdrop" @click="closeProductSheet">
+        <div class="sheet-motion-shell">
+          <div
+            ref="productSheet"
+            class="sheet"
+            :style="{
+              transform: `translateY(${productSheetOffsetY}px)`,
+              transition: productSheetTransition,
+            }"
+            @click.stop
+            @touchstart="handleProductSheetTouchStart"
+            @touchmove="handleProductSheetTouchMove"
+            @touchend="handleProductSheetTouchEnd"
+            @touchcancel="handleProductSheetTouchEnd"
+          >
+            <div class="sheet-header">
+              <div>
+                <p class="eyebrow">{{ $t('search.mobile.addToDiary') }}</p>
+                <h3>{{ selectedProduct.name }}</h3>
+                <span>{{ selectedProduct.brand }}</span>
+              </div>
+              <button class="close-btn" @click="closeProductSheet">×</button>
+            </div>
+
+            <img v-if="selectedProduct.image_url" :src="selectedProduct.image_url" :alt="selectedProduct.name" class="sheet-image">
+
+            <label class="sheet-field">
+              <span>{{ $t('search.calculator.servingSize') }}</span>
+              <div class="serving-input-row">
+                <input ref="servingInput" v-model.number="servingGrams" type="number" min="1" step="1">
+                <button type="button" class="serving-edit-btn" @click="focusServingInput" :aria-label="$t('dashboard.editServing.title')">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                    <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+                    <path d="M12.085 6.5l5.415 5.415l-8.793 8.792a1 1 0 0 1 -.707 .293h-4a1 1 0 0 1 -1 -1v-4a1 1 0 0 1 .293 -.707zm5.406 -2.698a3.828 3.828 0 0 1 1.716 6.405l-.292 .293l-5.415 -5.415l.293 -.292a3.83 3.83 0 0 1 3.698 -.991" />
+                  </svg>
+                </button>
+              </div>
+            </label>
+
+            <div class="nutrient-grid">
+              <div>
+                <span>Kcal</span>
+                <strong>{{ calculatedNutrients.energy_kcal }}</strong>
+              </div>
+              <div>
+                <span>{{ $t('search.nutrients.protein') }}</span>
+                <strong>{{ calculatedNutrients.proteins }}g</strong>
+              </div>
+              <div>
+                <span>{{ $t('search.nutrients.carbohydrates') }}</span>
+                <strong>{{ calculatedNutrients.carbohydrates }}g</strong>
+              </div>
+              <div>
+                <span>{{ $t('search.nutrients.fat') }}</span>
+                <strong>{{ calculatedNutrients.fat }}g</strong>
+              </div>
+            </div>
+
+            <div class="sheet-actions">
+              <button class="add-btn" @click="addToLog">{{ $t('search.addButton', { grams: servingGrams }) }}</button>
+              <button
+                v-if="targetList"
+                class="secondary-btn"
+                @click="addToList(targetList.id)"
+              >
+                {{ $t('search.mobile.addToList', { grams: servingGrams, list: targetList.name }) }}
+              </button>
+              <button
+                v-else-if="listsStore.hasLists"
+                class="secondary-btn"
+                @click="openListPicker"
+              >
+                {{ $t('search.mobile.addToListCta') }}
+              </button>
+              <button
+                v-else
+                class="secondary-btn"
+                @click="openListsScreen"
+              >
+                {{ $t('search.mobile.createListFirst') }}
+              </button>
+            </div>
           </div>
-          <button class="close-btn" @click="closeProductSheet">×</button>
         </div>
+      </div>
+    </Transition>
 
-        <img v-if="selectedProduct.image_url" :src="selectedProduct.image_url" :alt="selectedProduct.name" class="sheet-image">
+    <Transition name="sheet-transition">
+      <div v-if="showListPicker" class="sheet-backdrop nested" @click="closeListPicker">
+        <div class="sheet picker-sheet" @click.stop>
+          <div class="sheet-header">
+            <div>
+              <p class="eyebrow">{{ $t('search.mobile.chooseList') }}</p>
+              <h3>{{ $t('search.mobile.saveProduct', { name: selectedProduct?.name }) }}</h3>
+            </div>
+            <button class="close-btn" @click="closeListPicker">×</button>
+          </div>
 
-        <label class="sheet-field">
-          <span>{{ $t('search.calculator.servingSize') }}</span>
-          <div class="serving-input-row">
-            <input ref="servingInput" v-model.number="servingGrams" type="number" min="1" step="1">
-            <button type="button" class="serving-edit-btn" @click="focusServingInput" :aria-label="$t('dashboard.editServing.title')">
-              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
-                <path d="M12.085 6.5l5.415 5.415l-8.793 8.792a1 1 0 0 1 -.707 .293h-4a1 1 0 0 1 -1 -1v-4a1 1 0 0 1 .293 -.707zm5.406 -2.698a3.828 3.828 0 0 1 1.716 6.405l-.292 .293l-5.415 -5.415l.293 -.292a3.83 3.83 0 0 1 3.698 -.991" />
-              </svg>
+          <div class="list-picker-grid">
+            <button
+              v-for="list in listsStore.lists"
+              :key="list.id"
+              class="list-picker-btn"
+              @click="addToList(list.id)"
+            >
+              <strong>{{ list.name }}</strong>
+              <span>{{ $t('lists.itemCount', { count: list.items.length }) }}</span>
             </button>
           </div>
-        </label>
 
-        <div class="nutrient-grid">
-          <div>
-            <span>Kcal</span>
-            <strong>{{ calculatedNutrients.energy_kcal }}</strong>
-          </div>
-          <div>
-            <span>{{ $t('search.nutrients.protein') }}</span>
-            <strong>{{ calculatedNutrients.proteins }}g</strong>
-          </div>
-          <div>
-            <span>{{ $t('search.nutrients.carbohydrates') }}</span>
-            <strong>{{ calculatedNutrients.carbohydrates }}g</strong>
-          </div>
-          <div>
-            <span>{{ $t('search.nutrients.fat') }}</span>
-            <strong>{{ calculatedNutrients.fat }}g</strong>
-          </div>
-        </div>
-
-        <div class="sheet-actions">
-          <button class="add-btn" @click="addToLog">{{ $t('search.addButton', { grams: servingGrams }) }}</button>
-          <button
-            v-if="targetList"
-            class="secondary-btn"
-            @click="addToList(targetList.id)"
-          >
-            {{ $t('search.mobile.addToList', { grams: servingGrams, list: targetList.name }) }}
-          </button>
-          <button
-            v-else-if="listsStore.hasLists"
-            class="secondary-btn"
-            @click="openListPicker"
-          >
-            {{ $t('search.mobile.addToListCta') }}
-          </button>
-          <button
-            v-else
-            class="secondary-btn"
-            @click="openListsScreen"
-          >
-            {{ $t('search.mobile.createListFirst') }}
-          </button>
+          <button class="secondary-btn manage-btn" @click="openListsScreen">{{ $t('lists.manage') }}</button>
         </div>
       </div>
-    </div>
+    </Transition>
 
-    <div v-if="showListPicker" class="sheet-backdrop nested" @click="closeListPicker">
-      <div class="sheet picker-sheet" @click.stop>
-        <div class="sheet-header">
-          <div>
-            <p class="eyebrow">{{ $t('search.mobile.chooseList') }}</p>
-            <h3>{{ $t('search.mobile.saveProduct', { name: selectedProduct?.name }) }}</h3>
+    <Transition name="sheet-transition">
+      <div v-if="showBrowserScanner" class="sheet-backdrop" @click="stopBrowserScanner">
+        <div class="sheet" @click.stop>
+          <div class="sheet-header">
+            <div>
+              <p class="eyebrow">{{ $t('search.mobile.scannerEyebrow') }}</p>
+              <h3>{{ $t('search.scanner.title') }}</h3>
+            </div>
+            <button class="close-btn" @click="stopBrowserScanner">×</button>
           </div>
-          <button class="close-btn" @click="closeListPicker">×</button>
-        </div>
-
-        <div class="list-picker-grid">
-          <button
-            v-for="list in listsStore.lists"
-            :key="list.id"
-            class="list-picker-btn"
-            @click="addToList(list.id)"
-          >
-            <strong>{{ list.name }}</strong>
-            <span>{{ $t('lists.itemCount', { count: list.items.length }) }}</span>
-          </button>
-        </div>
-
-        <button class="secondary-btn manage-btn" @click="openListsScreen">{{ $t('lists.manage') }}</button>
-      </div>
-    </div>
-
-    <div v-if="showBrowserScanner" class="sheet-backdrop" @click="stopBrowserScanner">
-      <div class="sheet" @click.stop>
-        <div class="sheet-header">
-          <div>
-            <p class="eyebrow">{{ $t('search.mobile.scannerEyebrow') }}</p>
-            <h3>{{ $t('search.scanner.title') }}</h3>
+          <div class="video-shell">
+            <video id="mobile-barcode-video" autoplay playsinline></video>
           </div>
-          <button class="close-btn" @click="stopBrowserScanner">×</button>
+          <label class="sheet-field">
+            <span>{{ $t('search.scanner.manualEntry') }}</span>
+            <input v-model="manualBarcode" type="text" :placeholder="$t('search.barcodePlaceholder')" @keyup.enter="handleScannedBarcode(manualBarcode)">
+          </label>
         </div>
-        <div class="video-shell">
-          <video id="mobile-barcode-video" autoplay playsinline></video>
-        </div>
-        <label class="sheet-field">
-          <span>{{ $t('search.scanner.manualEntry') }}</span>
-          <input v-model="manualBarcode" type="text" :placeholder="$t('search.barcodePlaceholder')" @keyup.enter="handleScannedBarcode(manualBarcode)">
-        </label>
       </div>
-    </div>
+    </Transition>
   </section>
 </template>
 
@@ -679,8 +697,8 @@ function setupInfiniteScroll() {
 }
 
 .field-row {
+  position: relative;
   display: flex;
-  gap: 0.65rem;
   align-items: center;
 }
 
@@ -693,6 +711,10 @@ input {
   color: white;
   padding: 1rem;
   font: inherit;
+}
+
+.field-row input {
+  padding-right: 4rem;
 }
 
 input:focus {
@@ -723,19 +745,24 @@ input:focus {
   color: white;
 }
 
-.icon-btn {
-  flex: 0 0 auto;
-  width: 2.85rem;
-  height: 2.85rem;
+.danger-icon-btn {
+  background: rgba(255, 95, 95, 0.16);
+  color: #ff9e9e;
+}
+
+.field-clear-btn {
+  position: absolute;
+  top: 50%;
+  right: 0.65rem;
+  transform: translateY(-50%);
+  width: 2.5rem;
+  height: 2.5rem;
+  border: none;
+  border-radius: 999px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   padding: 0;
-}
-
-.danger-icon-btn {
-  background: rgba(255, 95, 95, 0.16);
-  color: #ff9e9e;
 }
 
 .action-grid {
@@ -756,6 +783,30 @@ input:focus {
 
 .manual-code {
   margin-top: 0.85rem;
+}
+
+.manual-code-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  column-gap: 0.8rem;
+}
+
+.manual-input-wrap {
+  min-width: 0;
+}
+
+.manual-input-wrap input {
+  padding-right: 4rem;
+}
+
+.compact-icon-btn {
+  width: 3.1rem;
+  height: 3.1rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
 }
 
 .status-banner {
@@ -907,6 +958,12 @@ input:focus {
   background: rgba(0, 0, 0, 0.35);
 }
 
+.sheet-motion-shell {
+  width: 100%;
+  display: flex;
+  align-items: flex-end;
+}
+
 .sheet {
   width: 100%;
   max-height: 88vh;
@@ -917,6 +974,38 @@ input:focus {
   padding: 1.25rem 1rem calc(env(safe-area-inset-bottom, 0px) + 1rem);
   background: #17151c;
   border-radius: 28px 28px 0 0;
+}
+
+.sheet-transition-enter-active,
+.sheet-transition-leave-active,
+.product-sheet-transition-enter-active,
+.product-sheet-transition-leave-active {
+  transition: opacity 0.24s ease;
+}
+
+.sheet-transition-enter-active .sheet,
+.sheet-transition-leave-active .sheet {
+  transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.24s ease;
+}
+
+.product-sheet-transition-enter-active .sheet-motion-shell,
+.product-sheet-transition-leave-active .sheet-motion-shell {
+  transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.24s ease;
+}
+
+.sheet-transition-enter-from,
+.sheet-transition-leave-to,
+.product-sheet-transition-enter-from,
+.product-sheet-transition-leave-to {
+  opacity: 0;
+}
+
+.sheet-transition-enter-from .sheet,
+.sheet-transition-leave-to .sheet,
+.product-sheet-transition-enter-from .sheet-motion-shell,
+.product-sheet-transition-leave-to .sheet-motion-shell {
+  transform: translateY(1.5rem);
+  opacity: 0;
 }
 
 .picker-sheet {

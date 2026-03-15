@@ -188,12 +188,11 @@ function removeItem(listId, itemId) {
             <span>{{ $t('lists.itemCount', { count: list.items.length }) }}</span>
           </div>
           <div class="list-card-actions">
-            <button class="card-action success-icon-btn" @click.stop="addFoodsToList(list.id)">
+            <button class="card-action success-icon-btn" :aria-label="$t('lists.addFoods')" @click.stop="addFoodsToList(list.id)">
               <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
                 <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
                 <path d="M12 5a1 1 0 0 1 1 1v5h5a1 1 0 1 1 0 2h-5v5a1 1 0 1 1 -2 0v-5h-5a1 1 0 1 1 0 -2h5v-5a1 1 0 0 1 1 -1z" />
               </svg>
-              <span>{{ $t('lists.addFoods') }}</span>
             </button>
             <button class="icon-action danger-icon-btn" :aria-label="$t('lists.deleteList')" @click.stop="deleteList(list)">
               <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
@@ -207,96 +206,102 @@ function removeItem(listId, itemId) {
 
     <button class="floating-create-btn" @click="openCreateSheet">{{ $t('lists.createNew') }}</button>
 
-    <div v-if="showCreateSheet" class="sheet-backdrop" @click="closeCreateSheet">
-      <div class="sheet" @click.stop>
-        <div class="sheet-header">
-          <div>
-            <p class="eyebrow">{{ $t('lists.newList') }}</p>
-            <h3>{{ $t('lists.nameList') }}</h3>
-          </div>
-          <button class="close-btn" @click="closeCreateSheet">×</button>
-        </div>
-
-        <label class="field-block">
-          <span>{{ $t('lists.listName') }}</span>
-          <input
-            v-model="newListName"
-            type="text"
-            :placeholder="$t('lists.placeholders.name')"
-            @keyup.enter="createList"
-          >
-        </label>
-
-        <button class="primary-cta inner create-submit-btn" @click="createList">{{ $t('lists.createList') }}</button>
-      </div>
-    </div>
-
-    <div v-if="selectedList" class="sheet-backdrop" @click="closeListSheet">
-      <div class="sheet detail-sheet" @click.stop>
-        <div class="sheet-header">
-          <div>
-            <p class="eyebrow">{{ $t('lists.details') }}</p>
-            <h3>{{ selectedList.name }}</h3>
-            <span>{{ $t('lists.savedItemCount', { count: selectedList.items.length }) }}</span>
-          </div>
-          <button class="close-btn" @click="closeListSheet">×</button>
-        </div>
-
-        <div class="detail-actions">
-          <button class="primary-cta inner" @click="addFoodsToList(selectedList.id)">{{ $t('lists.addFoodsToList') }}</button>
-          <button class="success-btn" :disabled="!selectedList.items.length" @click="openBulkAddSheet">{{ $t('lists.addAllToDay') }}</button>
-        </div>
-
-        <div v-if="!selectedList.items.length" class="empty-card detail-empty">
-          <p>{{ $t('lists.emptyList.title') }}</p>
-          <small>{{ $t('lists.emptyList.copy') }}</small>
-        </div>
-
-        <div v-else class="saved-items">
-          <article v-for="item in selectedList.items" :key="item.id" class="saved-item-card">
-            <img v-if="item.image_url" :src="item.image_url" :alt="item.label" class="saved-item-image">
-            <div class="saved-item-copy">
-              <strong>{{ item.label }}</strong>
-              <span v-if="item.brand">{{ item.brand }}</span>
-              <small>{{ item.serving_grams }}g · {{ Math.round(item.kcal) }} kcal</small>
-              <small>P {{ item.protein_g }}g · C {{ item.carb_g }}g · F {{ item.fat_g }}g</small>
+    <Transition name="sheet-transition">
+      <div v-if="showCreateSheet" class="sheet-backdrop" @click="closeCreateSheet">
+        <div class="sheet" @click.stop>
+          <div class="sheet-header">
+            <div>
+              <p class="eyebrow">{{ $t('lists.newList') }}</p>
+              <h3>{{ $t('lists.nameList') }}</h3>
             </div>
-            <button class="icon-action danger-icon-btn" :aria-label="$t('lists.removeItem')" @click="removeItem(selectedList.id, item.id)">
-              <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                <path d="M9 3a1 1 0 0 0 -.894 .553l-.382 .764l-3.724 .683a1 1 0 0 0 .18 1.984h.82l.724 10.138a3 3 0 0 0 2.992 2.778h6.568a3 3 0 0 0 2.992 -2.778l.724 -10.138h.82a1 1 0 0 0 .18 -1.984l-3.724 -.683l-.382 -.764a1 1 0 0 0 -.894 -.553zm0 2h6l.5 1h-7z" />
-              </svg>
-            </button>
-          </article>
-        </div>
-      </div>
-    </div>
-
-    <div v-if="showBulkAddSheet" class="sheet-backdrop nested" @click="closeBulkAddSheet">
-      <div class="sheet" @click.stop>
-        <div class="sheet-header">
-          <div>
-            <p class="eyebrow">{{ $t('lists.chooseDay') }}</p>
-            <h3>{{ $t('lists.addListToDay', { name: selectedList?.name }) }}</h3>
-            <span>{{ $t('lists.willBeAdded', { count: selectedList?.items.length || 0 }) }}</span>
+            <button class="close-btn" @click="closeCreateSheet">×</button>
           </div>
-          <button class="close-btn" @click="closeBulkAddSheet">×</button>
+
+          <label class="field-block">
+            <span>{{ $t('lists.listName') }}</span>
+            <input
+              v-model="newListName"
+              type="text"
+              :placeholder="$t('lists.placeholders.name')"
+              @keyup.enter="createList"
+            >
+          </label>
+
+          <button class="primary-cta inner create-submit-btn" @click="createList">{{ $t('lists.createList') }}</button>
         </div>
-
-        <div class="mode-toggle">
-          <button :class="['mode-btn', { active: bulkAddMode === 'today' }]" @click="bulkAddMode = 'today'">{{ $t('dashboard.today') }}</button>
-          <button :class="['mode-btn', { active: bulkAddMode === 'custom' }]" @click="bulkAddMode = 'custom'">{{ $t('lists.pastDay') }}</button>
-        </div>
-
-        <label v-if="bulkAddMode === 'custom'" class="field-block">
-          <span>{{ $t('lists.selectDate') }}</span>
-          <input v-model="bulkAddDate" type="date" :max="todayDate">
-        </label>
-
-        <button class="success-btn sheet-submit-btn" @click="addListToChosenDay">
-          {{ $t('lists.addAllItemsToDate', { date: bulkAddMode === 'today' ? $t('dashboard.today') : chosenBulkAddDate }) }}
-        </button>
       </div>
-    </div>
+    </Transition>
+
+    <Transition name="sheet-transition">
+      <div v-if="selectedList" class="sheet-backdrop" @click="closeListSheet">
+        <div class="sheet detail-sheet" @click.stop>
+          <div class="sheet-header">
+            <div>
+              <p class="eyebrow">{{ $t('lists.details') }}</p>
+              <h3>{{ selectedList.name }}</h3>
+              <span>{{ $t('lists.savedItemCount', { count: selectedList.items.length }) }}</span>
+            </div>
+            <button class="close-btn" @click="closeListSheet">×</button>
+          </div>
+
+          <div class="detail-actions">
+            <button class="primary-cta inner" @click="addFoodsToList(selectedList.id)">{{ $t('lists.addFoodsToList') }}</button>
+            <button class="success-btn" :disabled="!selectedList.items.length" @click="openBulkAddSheet">{{ $t('lists.addAllToDay') }}</button>
+          </div>
+
+          <div v-if="!selectedList.items.length" class="empty-card detail-empty">
+            <p>{{ $t('lists.emptyList.title') }}</p>
+            <small>{{ $t('lists.emptyList.copy') }}</small>
+          </div>
+
+          <div v-else class="saved-items">
+            <article v-for="item in selectedList.items" :key="item.id" class="saved-item-card">
+              <img v-if="item.image_url" :src="item.image_url" :alt="item.label" class="saved-item-image">
+              <div class="saved-item-copy">
+                <strong>{{ item.label }}</strong>
+                <span v-if="item.brand">{{ item.brand }}</span>
+                <small>{{ item.serving_grams }}g · {{ Math.round(item.kcal) }} kcal</small>
+                <small>P {{ item.protein_g }}g · C {{ item.carb_g }}g · F {{ item.fat_g }}g</small>
+              </div>
+              <button class="icon-action danger-icon-btn" :aria-label="$t('lists.removeItem')" @click="removeItem(selectedList.id, item.id)">
+                <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                  <path d="M9 3a1 1 0 0 0 -.894 .553l-.382 .764l-3.724 .683a1 1 0 0 0 .18 1.984h.82l.724 10.138a3 3 0 0 0 2.992 2.778h6.568a3 3 0 0 0 2.992 -2.778l.724 -10.138h.82a1 1 0 0 0 .18 -1.984l-3.724 -.683l-.382 -.764a1 1 0 0 0 -.894 -.553zm0 2h6l.5 1h-7z" />
+                </svg>
+              </button>
+            </article>
+          </div>
+        </div>
+      </div>
+    </Transition>
+
+    <Transition name="sheet-transition">
+      <div v-if="showBulkAddSheet" class="sheet-backdrop nested" @click="closeBulkAddSheet">
+        <div class="sheet" @click.stop>
+          <div class="sheet-header">
+            <div>
+              <p class="eyebrow">{{ $t('lists.chooseDay') }}</p>
+              <h3>{{ $t('lists.addListToDay', { name: selectedList?.name }) }}</h3>
+              <span>{{ $t('lists.willBeAdded', { count: selectedList?.items.length || 0 }) }}</span>
+            </div>
+            <button class="close-btn" @click="closeBulkAddSheet">×</button>
+          </div>
+
+          <div class="mode-toggle">
+            <button :class="['mode-btn', { active: bulkAddMode === 'today' }]" @click="bulkAddMode = 'today'">{{ $t('dashboard.today') }}</button>
+            <button :class="['mode-btn', { active: bulkAddMode === 'custom' }]" @click="bulkAddMode = 'custom'">{{ $t('lists.pastDay') }}</button>
+          </div>
+
+          <label v-if="bulkAddMode === 'custom'" class="field-block">
+            <span>{{ $t('lists.selectDate') }}</span>
+            <input v-model="bulkAddDate" type="date" :max="todayDate">
+          </label>
+
+          <button class="success-btn sheet-submit-btn" @click="addListToChosenDay">
+            {{ $t('lists.addAllItemsToDate', { date: bulkAddMode === 'today' ? $t('dashboard.today') : chosenBulkAddDate }) }}
+          </button>
+        </div>
+      </div>
+    </Transition>
   </section>
 </template>
 
@@ -466,7 +471,11 @@ function removeItem(listId, itemId) {
 .card-action {
   display: inline-flex;
   align-items: center;
-  gap: 0.45rem;
+  justify-content: center;
+  width: 2.9rem;
+  height: 2.9rem;
+  border-radius: 999px;
+  padding: 0;
 }
 
 .primary-cta {
@@ -573,6 +582,27 @@ function removeItem(listId, itemId) {
   padding: 1.25rem 1rem calc(env(safe-area-inset-bottom, 0px) + 1rem);
   border-radius: 28px 28px 0 0;
   background: #17151c;
+}
+
+.sheet-transition-enter-active,
+.sheet-transition-leave-active {
+  transition: opacity 0.24s ease;
+}
+
+.sheet-transition-enter-active .sheet,
+.sheet-transition-leave-active .sheet {
+  transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.24s ease;
+}
+
+.sheet-transition-enter-from,
+.sheet-transition-leave-to {
+  opacity: 0;
+}
+
+.sheet-transition-enter-from .sheet,
+.sheet-transition-leave-to .sheet {
+  transform: translateY(1.5rem);
+  opacity: 0;
 }
 
 .sheet-header {

@@ -232,7 +232,7 @@
       "instructions": "Positioniere den Barcode im Rahmen",
       "formats": "Unterstützt EAN-13, UPC, Code-128, QR-Codes und mehr",
       "or": "ODER",
-      "manualEntry": "Barcode manuell eingeben",
+      "manualEntry": "Barcode eingeben",
       "notSupported": "Barcode-Scannen wird in diesem Browser nicht unterstützt. Bitte verwende die manuelle Eingabe oder versuche es mit Chrome/Edge auf Android.",
       "unavailableHere": "Barcode-Scannen ist hier nicht verfügbar. Nutze die manuelle Eingabe."
     },

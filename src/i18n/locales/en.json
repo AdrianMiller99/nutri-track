@@ -232,7 +232,7 @@
       "instructions": "Position barcode within the frame",
       "formats": "Supports EAN-13, UPC, Code-128, QR codes, and more",
       "or": "OR",
-      "manualEntry": "Enter barcode manually",
+      "manualEntry": "Enter barcode",
       "notSupported": "Barcode scanning is not supported in this browser. Please use the manual entry option or try Chrome/Edge on Android.",
       "unavailableHere": "Barcode scanning is unavailable here. Use manual entry."
     },

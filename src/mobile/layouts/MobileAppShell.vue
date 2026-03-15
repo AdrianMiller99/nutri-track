@@ -14,7 +14,7 @@ const { t } = useI18n()
 const supportedLocales = ['en', 'de']
 
 const tabItems = computed(() => [
-  { label: t('nav.today'), icon: '◎', to: `/${currentLocale.value}/app/dashboard` },
+  { label: t('nav.dashboard'), icon: '◎', to: `/${currentLocale.value}/app/dashboard` },
   { label: t('nav.search'), icon: '⌕', to: `/${currentLocale.value}/app/search` },
   { label: t('nav.lists'), icon: '▤', to: `/${currentLocale.value}/app/lists` },
 ])
@@ -134,11 +134,12 @@ onUnmounted(() => {
         <p class="eyebrow">{{ pageEyebrow }}</p>
         <h1>{{ pageTitle }}</h1>
       </div>
-      <button class="header-action danger-icon-btn" :aria-label="$t('nav.logout')" @click="logout">
-        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+      <button class="header-action danger-icon-btn logout-btn" :aria-label="$t('nav.logout')" @click="logout">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
           <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
-          <path d="M14 3.5a1 1 0 0 1 1 1v3a1 1 0 1 1 -2 0v-2h-6v13h6v-2a1 1 0 1 1 2 0v3a1 1 0 0 1 -1 1h-7a2 2 0 0 1 -2 -2v-14a2 2 0 0 1 2 -2z" />
-          <path d="M13.793 11h5.793a1 1 0 0 1 .117 1.993l-.117 .007h-5.793l1.5 1.5a1 1 0 0 1 -1.32 1.497l-.094 -.083l-3.2 -3.2a1 1 0 0 1 -.083 -1.32l.083 -.094l3.2 -3.2a1 1 0 0 1 1.497 1.32l-.083 .094z" />
+          <path d="M14 8v-2a2 2 0 0 0 -2 -2h-7a2 2 0 0 0 -2 2v12a2 2 0 0 0 2 2h7a2 2 0 0 0 2 -2v-2" />
+          <path d="M9 12h12l-3 -3" />
+          <path d="M18 15l3 -3" />
         </svg>
       </button>
     </header>
@@ -159,42 +160,44 @@ onUnmounted(() => {
       </router-link>
     </nav>
 
-    <div v-if="showMenu" class="menu-backdrop" @click="closeMenu">
-      <aside class="menu-drawer" @click.stop>
-        <div class="menu-header">
-          <div>
-            <p class="eyebrow">{{ $t('menu.settings') }}</p>
-            <h2>{{ $t('menu.appMenu') }}</h2>
-          </div>
-          <button class="header-icon-btn close-menu-btn" aria-label="Close menu" @click="closeMenu">×</button>
-        </div>
-
-        <section class="menu-section">
-          <p class="menu-kicker">{{ $t('language.switch') }}</p>
-          <div class="locale-toggle">
-            <button
-              v-for="locale in supportedLocales"
-              :key="locale"
-              :class="['locale-btn', { active: locale === currentLocale }]"
-              @click="switchLocale(locale)"
-            >
-              {{ locale === 'en' ? 'English' : 'Deutsch' }}
-            </button>
-          </div>
-        </section>
-
-        <section class="menu-section">
-          <p class="menu-kicker">{{ $t('menu.connections') }}</p>
-          <div class="placeholder-card">
+    <Transition name="drawer-transition">
+      <div v-if="showMenu" class="menu-backdrop" @click="closeMenu">
+        <aside class="menu-drawer" @click.stop>
+          <div class="menu-header">
             <div>
-              <strong>Google Fit</strong>
-              <span>{{ $t('menu.googleFitDescription') }}</span>
+              <p class="eyebrow">{{ $t('menu.settings') }}</p>
+              <h2>{{ $t('menu.appMenu') }}</h2>
             </div>
-            <small>{{ $t('menu.placeholder') }}</small>
+            <button class="header-icon-btn close-menu-btn" aria-label="Close menu" @click="closeMenu">×</button>
           </div>
-        </section>
-      </aside>
-    </div>
+
+          <section class="menu-section">
+            <p class="menu-kicker">{{ $t('language.switch') }}</p>
+            <div class="locale-toggle">
+              <button
+                v-for="locale in supportedLocales"
+                :key="locale"
+                :class="['locale-btn', { active: locale === currentLocale }]"
+                @click="switchLocale(locale)"
+              >
+                {{ locale === 'en' ? 'English' : 'Deutsch' }}
+              </button>
+            </div>
+          </section>
+
+          <section class="menu-section">
+            <p class="menu-kicker">{{ $t('menu.connections') }}</p>
+            <div class="placeholder-card">
+              <div>
+                <strong>Google Fit</strong>
+                <span>{{ $t('menu.googleFitDescription') }}</span>
+              </div>
+              <small>{{ $t('menu.placeholder') }}</small>
+            </div>
+          </section>
+        </aside>
+      </div>
+    </Transition>
   </div>
 </template>
 
@@ -279,6 +282,15 @@ onUnmounted(() => {
   padding: 0;
 }
 
+.header-action svg {
+  display: block;
+}
+
+.logout-btn svg {
+  width: 1.35rem;
+  height: 1.35rem;
+}
+
 .danger-icon-btn {
   background: rgba(255, 95, 95, 0.16);
   color: #ff9e9e;
@@ -355,6 +367,27 @@ onUnmounted(() => {
   border-right: 1px solid rgba(255, 255, 255, 0.08);
   backdrop-filter: blur(24px);
   box-shadow: 24px 0 48px rgba(0, 0, 0, 0.3);
+}
+
+.drawer-transition-enter-active,
+.drawer-transition-leave-active {
+  transition: opacity 0.24s ease;
+}
+
+.drawer-transition-enter-active .menu-drawer,
+.drawer-transition-leave-active .menu-drawer {
+  transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.24s ease;
+}
+
+.drawer-transition-enter-from,
+.drawer-transition-leave-to {
+  opacity: 0;
+}
+
+.drawer-transition-enter-from .menu-drawer,
+.drawer-transition-leave-to .menu-drawer {
+  transform: translateX(-1.4rem);
+  opacity: 0;
 }
 
 .menu-header {

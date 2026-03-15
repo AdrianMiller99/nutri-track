@@ -6,24 +6,12 @@ import { useLocaleRoute } from '@/shared/composables/useLocaleRoute'
 
 const authStore = useAuthStore()
 const { t } = useI18n()
-const { router, pushLocale } = useLocaleRoute()
+const { currentLocale, router, pushLocale } = useLocaleRoute()
 
 const primaryActionLabel = computed(() => (authStore.user ? t('home.cta.openDiary') : t('home.cta.getStarted')))
-const secondaryActionLabel = computed(() => (authStore.user ? t('auth.switchAccount') : t('home.cta.login')))
-
 function goPrimary() {
   if (authStore.user) {
     pushLocale('/app/dashboard')
-    return
-  }
-
-  pushLocale('/auth')
-}
-
-async function goSecondary() {
-  if (authStore.user) {
-    await authStore.signOut()
-    router.replace(`/${currentLocale.value}/auth`)
     return
   }
 
@@ -41,9 +29,6 @@ async function goSecondary() {
       <div class="hero-actions">
         <button class="primary-btn" @click="goPrimary">
           {{ primaryActionLabel }}
-        </button>
-        <button class="secondary-btn" @click="goSecondary">
-          {{ secondaryActionLabel }}
         </button>
       </div>
     </div>
@@ -108,8 +93,7 @@ h1 {
 
 .hero-actions {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0.75rem;
+  grid-template-columns: 1fr;
   margin-top: 1.5rem;
 }
 
@@ -124,11 +108,6 @@ button {
 .primary-btn {
   background: linear-gradient(135deg, #ffd166 0%, #ef8354 100%);
   color: #1a1511;
-}
-
-.secondary-btn {
-  background: rgba(255, 255, 255, 0.06);
-  color: white;
 }
 
 .highlight-grid {

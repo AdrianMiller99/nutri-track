@@ -524,28 +524,30 @@ function handleSwipeCancel() {
       </div>
     </div>
 
-    <div v-if="editingItem" class="sheet-backdrop" @click="closeEdit">
-      <div class="sheet" @click.stop>
-        <p class="section-eyebrow">{{ $t('dashboard.editServing.title') }}</p>
-        <h3>{{ editingItem.label }}</h3>
-        <label>
-          <span>{{ $t('dashboard.editServing.label') }}</span>
-          <div class="serving-input-row">
-            <input ref="editServingInput" v-model.number="editServingGrams" type="number" min="1" step="1">
-            <button type="button" class="serving-edit-btn" :aria-label="$t('dashboard.editServing.title')" @click="focusEditServingInput">
-              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
-                <path d="M12.085 6.5l5.415 5.415l-8.793 8.792a1 1 0 0 1 -.707 .293h-4a1 1 0 0 1 -1 -1v-4a1 1 0 0 1 .293 -.707zm5.406 -2.698a3.828 3.828 0 0 1 1.716 6.405l-.292 .293l-5.415 -5.415l.293 -.292a3.83 3.83 0 0 1 3.698 -.991" />
-              </svg>
-            </button>
+    <Transition name="sheet-transition">
+      <div v-if="editingItem" class="sheet-backdrop" @click="closeEdit">
+        <div class="sheet" @click.stop>
+          <p class="section-eyebrow">{{ $t('dashboard.editServing.title') }}</p>
+          <h3>{{ editingItem.label }}</h3>
+          <label>
+            <span>{{ $t('dashboard.editServing.label') }}</span>
+            <div class="serving-input-row">
+              <input ref="editServingInput" v-model.number="editServingGrams" type="number" min="1" step="1">
+              <button type="button" class="serving-edit-btn" :aria-label="$t('dashboard.editServing.title')" @click="focusEditServingInput">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                  <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+                  <path d="M12.085 6.5l5.415 5.415l-8.793 8.792a1 1 0 0 1 -.707 .293h-4a1 1 0 0 1 -1 -1v-4a1 1 0 0 1 .293 -.707zm5.406 -2.698a3.828 3.828 0 0 1 1.716 6.405l-.292 .293l-5.415 -5.415l.293 -.292a3.83 3.83 0 0 1 3.698 -.991" />
+                </svg>
+              </button>
+            </div>
+          </label>
+          <div class="sheet-actions">
+            <button class="ghost" @click="closeEdit">{{ $t('dashboard.editServing.cancel') }}</button>
+            <button class="save" @click="saveEdit">{{ $t('dashboard.editServing.save') }}</button>
           </div>
-        </label>
-        <div class="sheet-actions">
-          <button class="ghost" @click="closeEdit">{{ $t('dashboard.editServing.cancel') }}</button>
-          <button class="save" @click="saveEdit">{{ $t('dashboard.editServing.save') }}</button>
         </div>
       </div>
-    </div>
+    </Transition>
   </section>
 </template>
 
@@ -870,6 +872,27 @@ function handleSwipeCancel() {
   padding: 1.25rem 1rem calc(env(safe-area-inset-bottom, 0px) + 1rem);
   background: #17151c;
   border-radius: 28px 28px 0 0;
+}
+
+.sheet-transition-enter-active,
+.sheet-transition-leave-active {
+  transition: opacity 0.24s ease;
+}
+
+.sheet-transition-enter-active .sheet,
+.sheet-transition-leave-active .sheet {
+  transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.24s ease;
+}
+
+.sheet-transition-enter-from,
+.sheet-transition-leave-to {
+  opacity: 0;
+}
+
+.sheet-transition-enter-from .sheet,
+.sheet-transition-leave-to .sheet {
+  transform: translateY(1.5rem);
+  opacity: 0;
 }
 
 .sheet label {
