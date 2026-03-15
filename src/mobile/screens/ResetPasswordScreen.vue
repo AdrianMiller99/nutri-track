@@ -1,7 +1,7 @@
 <script setup>
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { buildAuthRedirectUrl } from '@/lib/supabaseClient'
+import { buildPasswordResetRedirectUrl } from '@/lib/supabaseClient'
 import { useAuthStore } from '@/stores/auth'
 import { useLocaleRoute } from '@/shared/composables/useLocaleRoute'
 
@@ -29,7 +29,13 @@ const recoveryLinkPresent = computed(() => {
 const invalidRecoveryLink = computed(
   () => recoveryLinkPresent.value && authStore.initialized && !authStore.isRecoveryMode && !authStore.user
 )
-const showRecoveryForm = computed(() => authStore.isRecoveryMode)
+const showRecoveryForm = computed(() => authStore.isRecoveryMode || (recoveryLinkPresent.value && !!authStore.user))
+
+onMounted(() => {
+  if (recoveryLinkPresent.value && !authStore.isRecoveryMode) {
+    void authStore.consumeRecoveryLink(window.location.href)
+  }
+})
 
 function validatePasswordReset() {
   if (password.value !== confirmPassword.value) {
@@ -54,7 +60,7 @@ async function handleRequestReset() {
   authStore.error = null
 
   try {
-    const redirectTo = buildAuthRedirectUrl(currentLocale.value, '/auth/reset-password')
+    const redirectTo = buildPasswordResetRedirectUrl(currentLocale.value)
     const result = await authStore.requestPasswordReset(email.value, redirectTo)
     if (result.ok) {
       feedbackSuccess.value = t('auth.resetPassword.emailSent')

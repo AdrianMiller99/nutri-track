@@ -1,5 +1,12 @@
 import { defineStore } from 'pinia'
-import { buildAuthRedirectUrl, hasSupabaseConfig, supabase, supabaseConfigError } from '@/lib/supabaseClient'
+import {
+  buildAuthRedirectUrl,
+  getAuthSessionTokensFromUrl,
+  hasRecoveryCallback,
+  hasSupabaseConfig,
+  supabase,
+  supabaseConfigError,
+} from '@/lib/supabaseClient'
 import { useDayStore } from './day'
 import { useFoodStore } from './food'
 import { useListsStore } from './lists'
@@ -40,6 +47,10 @@ function getLocaleFromWindowPath() {
   return match?.[2] || 'en'
 }
 
+function hasRecoveryLinkInCurrentLocation() {
+  return hasRecoveryCallback()
+}
+
 function mapSignInError(error) {
   const message = getErrorMessage(error).toLowerCase()
 
@@ -74,7 +85,10 @@ export const useAuthStore = defineStore('auth', {
       this.lastAuthEvent = event
       this.user = session?.user ?? null
 
-      if (event === 'PASSWORD_RECOVERY') {
+      const shouldEnterRecoveryMode = event === 'PASSWORD_RECOVERY'
+        || (session?.user && hasRecoveryLinkInCurrentLocation() && ['INITIAL_SESSION', 'SIGNED_IN', 'TOKEN_REFRESHED'].includes(event))
+
+      if (shouldEnterRecoveryMode) {
         this.isRecoveryMode = true
         return
       }
@@ -115,7 +129,7 @@ export const useAuthStore = defineStore('auth', {
         this.error = null
       }
 
-      this.setSessionState('INITIAL_SESSION', session)
+      this.setSessionState(hasRecoveryLinkInCurrentLocation() && session ? 'PASSWORD_RECOVERY' : 'INITIAL_SESSION', session)
       this.loading = false
       this.initialized = true
     },
@@ -261,6 +275,78 @@ export const useAuthStore = defineStore('auth', {
           ok: true,
           code: 'reset_email_sent',
           outcome: 'reset_email_sent',
+        })
+      } catch (error) {
+        this.error = getErrorMessage(error)
+        return makeResult({
+          ok: false,
+          error,
+          code: 'unexpected_error',
+        })
+      }
+    },
+
+    async consumeRecoveryLink(url) {
+      if (!hasSupabaseConfig) {
+        this.error = supabaseConfigError
+        return getConfigErrorResult()
+      }
+
+      this.error = null
+
+      try {
+        if (!hasRecoveryCallback(url)) {
+          return makeResult({
+            ok: false,
+            code: 'not_recovery_link',
+          })
+        }
+
+        const sessionTokens = getAuthSessionTokensFromUrl(url)
+        if (sessionTokens) {
+          const { data, error } = await supabase.auth.setSession(sessionTokens)
+          if (error) {
+            this.error = error.message
+            return makeResult({
+              ok: false,
+              error,
+              code: 'unexpected_error',
+            })
+          }
+
+          this.setSessionState('PASSWORD_RECOVERY', data.session)
+
+          return makeResult({
+            ok: true,
+            data,
+            code: 'recovery_session_restored',
+            outcome: 'recovery_session_restored',
+          })
+        }
+
+        const { data: { session }, error } = await supabase.auth.getSession()
+        if (error) {
+          this.error = error.message
+          return makeResult({
+            ok: false,
+            error,
+            code: 'unexpected_error',
+          })
+        }
+
+        if (session?.user) {
+          this.setSessionState('PASSWORD_RECOVERY', session)
+          return makeResult({
+            ok: true,
+            data: { session },
+            code: 'recovery_session_restored',
+            outcome: 'recovery_session_restored',
+          })
+        }
+
+        return makeResult({
+          ok: false,
+          code: 'recovery_session_missing',
         })
       } catch (error) {
         this.error = getErrorMessage(error)
