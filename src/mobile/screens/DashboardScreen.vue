@@ -351,7 +351,7 @@ function handleSwipeCancel() {
           <section class="items-card">
             <div class="section-heading">
               <div>
-                <p class="section-eyebrow">Logged</p>
+                <p class="section-eyebrow">{{ $t('dashboard.sectionEyebrow') }}</p>
                 <h3>{{ $t('dashboard.loggedFoods') }}</h3>
               </div>
               <span class="count-pill">{{ dayStore.itemCount }}</span>
@@ -386,13 +386,13 @@ function handleSwipeCancel() {
                   <span>F {{ item.fat_g }}g</span>
                 </div>
                 <div class="item-actions">
-                  <button class="icon-action" aria-label="Edit item" @click="startEdit(item)">
+                  <button class="icon-action" :aria-label="$t('dashboard.editServing.title')" @click="startEdit(item)">
                     <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
                       <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
                       <path d="M12.085 6.5l5.415 5.415l-8.793 8.792a1 1 0 0 1 -.707 .293h-4a1 1 0 0 1 -1 -1v-4a1 1 0 0 1 .293 -.707zm5.406 -2.698a3.828 3.828 0 0 1 1.716 6.405l-.292 .293l-5.415 -5.415l.293 -.292a3.83 3.83 0 0 1 3.698 -.991" />
                     </svg>
                   </button>
-                  <button class="icon-action danger-icon-btn" aria-label="Delete item" @click="deleteItem(item)">
+                  <button class="icon-action danger-icon-btn" :aria-label="$t('dashboard.delete')" @click="deleteItem(item)">
                     <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
                       <path d="M9 3a1 1 0 0 0 -.894 .553l-.382 .764l-3.724 .683a1 1 0 0 0 .18 1.984h.82l.724 10.138a3 3 0 0 0 2.992 2.778h6.568a3 3 0 0 0 2.992 -2.778l.724 -10.138h.82a1 1 0 0 0 .18 -1.984l-3.724 -.683l-.382 -.764a1 1 0 0 0 -.894 -.553zm0 2h6l.5 1h-7z" />
                     </svg>
@@ -470,7 +470,7 @@ function handleSwipeCancel() {
           <section class="items-card">
             <div class="section-heading">
               <div>
-                <p class="section-eyebrow">Logged</p>
+                <p class="section-eyebrow">{{ $t('dashboard.sectionEyebrow') }}</p>
                 <h3>{{ $t('dashboard.loggedFoods') }}</h3>
               </div>
               <span class="count-pill">{{ dayStore.itemCount }}</span>
@@ -505,13 +505,13 @@ function handleSwipeCancel() {
                   <span>F {{ item.fat_g }}g</span>
                 </div>
                 <div class="item-actions">
-                  <button class="icon-action" aria-label="Edit item" @click="startEdit(item)">
+                  <button class="icon-action" :aria-label="$t('dashboard.editServing.title')" @click="startEdit(item)">
                     <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
                       <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
                       <path d="M12.085 6.5l5.415 5.415l-8.793 8.792a1 1 0 0 1 -.707 .293h-4a1 1 0 0 1 -1 -1v-4a1 1 0 0 1 .293 -.707zm5.406 -2.698a3.828 3.828 0 0 1 1.716 6.405l-.292 .293l-5.415 -5.415l.293 -.292a3.83 3.83 0 0 1 3.698 -.991" />
                     </svg>
                   </button>
-                  <button class="icon-action danger-icon-btn" aria-label="Delete item" @click="deleteItem(item)">
+                  <button class="icon-action danger-icon-btn" :aria-label="$t('dashboard.delete')" @click="deleteItem(item)">
                     <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
                       <path d="M9 3a1 1 0 0 0 -.894 .553l-.382 .764l-3.724 .683a1 1 0 0 0 .18 1.984h.82l.724 10.138a3 3 0 0 0 2.992 2.778h6.568a3 3 0 0 0 2.992 -2.778l.724 -10.138h.82a1 1 0 0 0 .18 -1.984l-3.724 -.683l-.382 -.764a1 1 0 0 0 -.894 -.553zm0 2h6l.5 1h-7z" />
                     </svg>
@@ -526,13 +526,13 @@ function handleSwipeCancel() {
 
     <div v-if="editingItem" class="sheet-backdrop" @click="closeEdit">
       <div class="sheet" @click.stop>
-        <p class="section-eyebrow">Edit serving</p>
+        <p class="section-eyebrow">{{ $t('dashboard.editServing.title') }}</p>
         <h3>{{ editingItem.label }}</h3>
         <label>
-          <span>Serving grams</span>
+          <span>{{ $t('dashboard.editServing.label') }}</span>
           <div class="serving-input-row">
             <input ref="editServingInput" v-model.number="editServingGrams" type="number" min="1" step="1">
-            <button type="button" class="serving-edit-btn" aria-label="Edit serving grams" @click="focusEditServingInput">
+            <button type="button" class="serving-edit-btn" :aria-label="$t('dashboard.editServing.title')" @click="focusEditServingInput">
               <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
                 <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
                 <path d="M12.085 6.5l5.415 5.415l-8.793 8.792a1 1 0 0 1 -.707 .293h-4a1 1 0 0 1 -1 -1v-4a1 1 0 0 1 .293 -.707zm5.406 -2.698a3.828 3.828 0 0 1 1.716 6.405l-.292 .293l-5.415 -5.415l.293 -.292a3.83 3.83 0 0 1 3.698 -.991" />
@@ -541,7 +541,7 @@ function handleSwipeCancel() {
           </div>
         </label>
         <div class="sheet-actions">
-          <button class="ghost" @click="closeEdit">Cancel</button>
+          <button class="ghost" @click="closeEdit">{{ $t('dashboard.editServing.cancel') }}</button>
           <button class="save" @click="saveEdit">{{ $t('dashboard.editServing.save') }}</button>
         </div>
       </div>
@@ -732,6 +732,8 @@ function handleSwipeCancel() {
   grid-column: 2;
   display: flex;
   gap: 0.75rem;
+  justify-content: flex-end;
+  margin-left: auto;
 }
 
 .item-actions button,

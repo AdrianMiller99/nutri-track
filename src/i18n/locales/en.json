@@ -6,7 +6,16 @@
   "nav": {
     "dashboard": "Dashboard",
     "search": "Search",
-    "logout": "Logout"
+    "logout": "Logout",
+    "today": "Today",
+    "lists": "Lists"
+  },
+  "menu": {
+    "settings": "Settings",
+    "appMenu": "App menu",
+    "connections": "Connections",
+    "googleFitDescription": "Coming soon. Connect activity and health data later.",
+    "placeholder": "Placeholder"
   },
   "home": {
     "title": "Welcome to NutriTrack",
@@ -49,25 +58,67 @@
     "cta": {
       "getStarted": "Get Started",
       "learnMore": "Learn More",
-      "login": "Login"
+      "login": "Login",
+      "openDiary": "Open diary"
     },
     "footer": {
       "builtWith": "Built with 💚 using Vue & Supabase",
       "dataFrom": "Data from"
     }
   },
+  "mobileHome": {
+    "eyebrow": "Native Preview",
+    "title": "Track food fast, one thumb at a time.",
+    "copy": "The mobile app is optimized for quick logging, scanning, and reviewing your day without desktop chrome.",
+    "cards": {
+      "quickAdd": {
+        "kicker": "Quick add",
+        "title": "Search and barcode flows are front and center."
+      },
+      "glance": {
+        "kicker": "At-a-glance",
+        "title": "Calories and macros stay visible without scrolling through desktop UI."
+      },
+      "touchFirst": {
+        "kicker": "Touch-first",
+        "title": "Large hit targets, bottom navigation, and sheet-style product details."
+      }
+    }
+  },
   "auth": {
     "signIn": "Sign In",
     "signUp": "Sign Up",
+    "loading": "Restoring your session...",
+    "mobileEyebrow": "Mobile App",
+    "accountTitle": "Account",
     "email": "Email",
     "password": "Password",
     "confirmPassword": "Confirm Password",
     "signInButton": "Sign In",
     "signUpButton": "Sign Up",
+    "forgotPassword": "Forgot password?",
+    "switchAccount": "Switch account",
     "switchToSignUp": "Don't have an account? Sign up",
     "switchToSignIn": "Already have an account? Sign in",
     "successMessage": "✅ Account created! Please check your email to confirm your account.",
     "goToLogin": "Go to Login",
+    "placeholders": {
+      "newPassword": "At least 6 characters",
+      "confirmPassword": "Repeat your password"
+    },
+    "resetPassword": {
+      "eyebrow": "Account recovery",
+      "title": "Reset your password",
+      "requestDescription": "Enter your email and we'll send you a reset link if an account exists.",
+      "recoveryDescription": "Choose a new password for your Nutri Track account.",
+      "sendLink": "Send reset link",
+      "updateButton": "Update password",
+      "newPassword": "New password",
+      "emailSent": "If an account exists for that email, we sent a reset link.",
+      "success": "Your password was updated successfully.",
+      "invalidLink": "This recovery link is invalid or expired. Request a new reset email below.",
+      "backToSignIn": "Back to sign in"
+    },
     "whyNutriTrack": "Why NutriTrack?",
     "features": {
       "search": "Search 3M+ foods from Open Food Facts",
@@ -75,10 +126,24 @@
       "mobile": "Works on web and mobile (Android)",
       "secure": "Your data is private and secure"
     },
+    "mobileCards": {
+      "fastCapture": {
+        "title": "Fast capture",
+        "copy": "Search or scan from the phone in a couple of taps."
+      },
+      "privateAccount": {
+        "title": "Private account",
+        "copy": "Your diary stays tied to your authenticated Supabase user."
+      }
+    },
     "errors": {
       "passwordMismatch": "Passwords don't match",
       "invalidEmail": "Invalid email address",
-      "weakPassword": "Password must be at least 6 characters"
+      "weakPassword": "Password must be at least 6 characters",
+      "accountExists": "An account with this email already exists.",
+      "invalidCredentials": "The email or password is incorrect.",
+      "emailNotConfirmed": "Please confirm your email before signing in.",
+      "generic": "Something went wrong. Please try again."
     }
   },
   "dashboard": {
@@ -109,6 +174,7 @@
     "hideDetails": "Hide Details",
     "foodLog": "Food Log",
     "delete": "Delete",
+    "sectionEyebrow": "Logged",
     "confirmDelete": "Delete {item}?",
     "editServing": {
       "title": "Edit Serving Size",
@@ -167,15 +233,82 @@
       "formats": "Supports EAN-13, UPC, Code-128, QR codes, and more",
       "or": "OR",
       "manualEntry": "Enter barcode manually",
-      "notSupported": "Barcode scanning is not supported in this browser. Please use the manual entry option or try Chrome/Edge on Android."
+      "notSupported": "Barcode scanning is not supported in this browser. Please use the manual entry option or try Chrome/Edge on Android.",
+      "unavailableHere": "Barcode scanning is unavailable here. Use manual entry."
+    },
+    "mobile": {
+      "searchProducts": "Search products",
+      "hideCodeInput": "Hide code input",
+      "startTyping": "Start typing to search Open Food Facts.",
+      "addToDiary": "Add to diary",
+      "addToList": "Add {grams}g to {list}",
+      "addToListCta": "Add to list",
+      "createListFirst": "Create a list first",
+      "chooseList": "Choose list",
+      "saveProduct": "Save {name}",
+      "scannerEyebrow": "Scanner"
     },
     "errors": {
       "productNotFound": "Product not found. The barcode might not be in the database.",
       "cameraPermission": "Camera permission denied. Please allow camera access and try again.",
-      "cameraFailed": "Failed to start camera"
+      "cameraFailed": "Failed to start camera",
+      "cameraAccessDisabled": "Camera access is disabled for barcode scanning.",
+      "cameraPermissionNotGranted": "Camera permission was not granted.",
+      "scannerError": "Scanner error: {message}"
     },
     "success": {
       "added": "Added {grams}g of {name} to {date}!"
+    },
+    "messages": {
+      "addedToDiary": "Added {name}",
+      "savedToList": "Saved {name} to {list}"
+    }
+  },
+  "lists": {
+    "savedCollections": "Saved collections",
+    "yourLists": "Your lists",
+    "hero": {
+      "title": "Build reusable food lists for meals, groceries, or routines.",
+      "copy": "Create a list once, then add foods to it directly from search whenever you find something worth saving."
+    },
+    "empty": {
+      "title": "No lists yet.",
+      "copy": "Create one to start saving foods outside the daily diary."
+    },
+    "emptyList": {
+      "title": "This list is empty.",
+      "copy": "Use the button above to open search and start saving products into it."
+    },
+    "itemCount": "{count} items",
+    "savedItemCount": "{count} saved items",
+    "newList": "New list",
+    "nameList": "Name your list",
+    "listName": "List name",
+    "createList": "Create list",
+    "createNew": "Create new list",
+    "details": "List details",
+    "addFoods": "Add foods",
+    "addFoodsToList": "Add foods to this list",
+    "addAllToDay": "Add all to a day",
+    "chooseDay": "Choose day",
+    "addListToDay": "Add {name}",
+    "willBeAdded": "{count} items will be added",
+    "pastDay": "Past day",
+    "selectDate": "Select date",
+    "addAllItemsToDate": "Add all items to {date}",
+    "manage": "Manage lists",
+    "deleteList": "Delete list",
+    "removeItem": "Remove item",
+    "confirmDelete": "Delete \"{name}\"?",
+    "placeholders": {
+      "name": "Weekly breakfast"
+    },
+    "messages": {
+      "chooseValidDay": "Choose a valid day first",
+      "addedToDay": "Added {count} items to {date}"
+    },
+    "errors": {
+      "notFound": "List not found"
     }
   },
   "language": {

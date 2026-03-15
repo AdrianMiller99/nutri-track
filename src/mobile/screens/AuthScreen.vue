@@ -1,14 +1,17 @@
 <script setup>
 import { ref, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 import { useLocaleRoute } from '@/shared/composables/useLocaleRoute'
 
 const authStore = useAuthStore()
+const { t } = useI18n()
 const { pushLocale } = useLocaleRoute()
 
 const mode = ref('login')
 const loading = ref(false)
 const signupSuccess = ref(false)
+const feedbackError = ref('')
 
 const loginEmail = ref('')
 const loginPassword = ref('')
@@ -19,24 +22,68 @@ const signupPasswordConfirm = ref('')
 watch(
   () => authStore.user,
   (user) => {
-    if (user) {
+    if (user && !authStore.isRecoveryMode) {
       pushLocale('/app/dashboard')
     }
   },
   { immediate: true }
 )
 
+watch(mode, () => {
+  feedbackError.value = ''
+  signupSuccess.value = false
+  authStore.error = null
+})
+
+function setErrorMessage(code) {
+  if (code === 'account_exists') {
+    feedbackError.value = t('auth.errors.accountExists')
+    return
+  }
+
+  if (code === 'invalid_credentials') {
+    feedbackError.value = t('auth.errors.invalidCredentials')
+    return
+  }
+
+  if (code === 'email_not_confirmed') {
+    feedbackError.value = t('auth.errors.emailNotConfirmed')
+    return
+  }
+
+  feedbackError.value = authStore.error || t('auth.errors.generic')
+}
+
+function validateSignup() {
+  if (signupPassword.value !== signupPasswordConfirm.value) {
+    feedbackError.value = t('auth.errors.passwordMismatch')
+    return false
+  }
+
+  if (signupPassword.value.length < 6) {
+    feedbackError.value = t('auth.errors.weakPassword')
+    return false
+  }
+
+  return true
+}
+
 async function handleLogin() {
   if (loading.value) return
 
   loading.value = true
   authStore.error = null
+  feedbackError.value = ''
+  signupSuccess.value = false
 
   try {
     const result = await authStore.signIn(loginEmail.value, loginPassword.value)
-    if (result && !authStore.error) {
+    if (result.ok && result.data?.session) {
       pushLocale('/app/dashboard')
+      return
     }
+
+    setErrorMessage(result.code)
   } finally {
     loading.value = false
   }
@@ -45,28 +92,28 @@ async function handleLogin() {
 async function handleSignup() {
   if (loading.value) return
 
-  if (signupPassword.value !== signupPasswordConfirm.value) {
-    authStore.error = 'Passwords do not match'
-    return
-  }
+  feedbackError.value = ''
 
-  if (signupPassword.value.length < 6) {
-    authStore.error = 'Password must be at least 6 characters'
+  if (!validateSignup()) {
     return
   }
 
   loading.value = true
   authStore.error = null
+  signupSuccess.value = false
 
   try {
     const result = await authStore.signUp(signupEmail.value, signupPassword.value)
-    if (result && !authStore.error) {
+    if (result.ok && result.data?.user) {
       signupSuccess.value = true
       mode.value = 'login'
       signupEmail.value = ''
       signupPassword.value = ''
       signupPasswordConfirm.value = ''
+      return
     }
+
+    setErrorMessage(result.code)
   } finally {
     loading.value = false
   }
@@ -76,7 +123,7 @@ async function handleSignup() {
 <template>
   <section class="mobile-auth">
     <div class="brand-block">
-      <p class="eyebrow">Mobile App</p>
+      <p class="eyebrow">{{ $t('auth.mobileEyebrow') }}</p>
       <h1>{{ $t('app.name') }}</h1>
       <p>{{ $t('app.tagline') }}</p>
     </div>
@@ -97,6 +144,9 @@ async function handleSignup() {
           <input v-model="loginPassword" type="password" autocomplete="current-password" placeholder="••••••••" required>
         </label>
         <button class="submit-btn" type="submit" :disabled="loading">{{ $t('auth.signInButton') }}</button>
+        <button class="forgot-link" type="button" @click="pushLocale('/auth/reset-password')">
+          {{ $t('auth.forgotPassword') }}
+        </button>
       </form>
 
       <form v-else class="auth-form" @submit.prevent="handleSignup">
@@ -106,27 +156,39 @@ async function handleSignup() {
         </label>
         <label>
           <span>{{ $t('auth.password') }}</span>
-          <input v-model="signupPassword" type="password" autocomplete="new-password" placeholder="At least 6 characters" required>
+          <input
+            v-model="signupPassword"
+            type="password"
+            autocomplete="new-password"
+            :placeholder="$t('auth.placeholders.newPassword')"
+            required
+          >
         </label>
         <label>
           <span>{{ $t('auth.confirmPassword') }}</span>
-          <input v-model="signupPasswordConfirm" type="password" autocomplete="new-password" placeholder="Repeat your password" required>
+          <input
+            v-model="signupPasswordConfirm"
+            type="password"
+            autocomplete="new-password"
+            :placeholder="$t('auth.placeholders.confirmPassword')"
+            required
+          >
         </label>
         <button class="submit-btn" type="submit" :disabled="loading">{{ $t('auth.signUpButton') }}</button>
       </form>
 
-      <p v-if="authStore.error" class="message error">{{ authStore.error }}</p>
+      <p v-if="feedbackError" class="message error">{{ feedbackError }}</p>
       <p v-if="signupSuccess" class="message success">{{ $t('auth.successMessage') }}</p>
     </div>
 
     <div class="trust-grid">
       <article>
-        <strong>Fast capture</strong>
-        <span>Search or scan from the phone in a couple of taps.</span>
+        <strong>{{ $t('auth.mobileCards.fastCapture.title') }}</strong>
+        <span>{{ $t('auth.mobileCards.fastCapture.copy') }}</span>
       </article>
       <article>
-        <strong>Private account</strong>
-        <span>Your diary stays tied to your authenticated Supabase user.</span>
+        <strong>{{ $t('auth.mobileCards.privateAccount.title') }}</strong>
+        <span>{{ $t('auth.mobileCards.privateAccount.copy') }}</span>
       </article>
     </div>
   </section>
@@ -232,6 +294,16 @@ input:focus {
   color: #141414;
 }
 
+.forgot-link {
+  width: fit-content;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.78);
+  font: inherit;
+  text-decoration: underline;
+}
+
 .message {
   margin: 0.9rem 0 0;
   padding: 0.9rem 1rem;
@@ -261,11 +333,15 @@ input:focus {
   padding: 1rem 1.1rem;
   border-radius: 22px;
   background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.trust-grid strong {
+  font-size: 1rem;
 }
 
 .trust-grid span {
-  color: rgba(255, 255, 255, 0.68);
-  line-height: 1.5;
+  color: rgba(255, 255, 255, 0.7);
+  line-height: 1.45;
 }
 </style>

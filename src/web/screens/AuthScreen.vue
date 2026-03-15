@@ -7,15 +7,14 @@
       </div>
 
       <div class="auth-card">
-        <!-- Toggle between Login and Signup -->
         <div class="auth-tabs">
-          <button 
+          <button
             :class="{ active: mode === 'login' }"
             @click="mode = 'login'"
           >
             {{ $t('auth.signIn') }}
           </button>
-          <button 
+          <button
             :class="{ active: mode === 'signup' }"
             @click="mode = 'signup'"
           >
@@ -23,10 +22,9 @@
           </button>
         </div>
 
-        <!-- Login Form -->
         <form v-if="mode === 'login'" @submit.prevent="handleLogin" class="auth-form">
           <h2>{{ $t('auth.signIn') }}</h2>
-          
+
           <div class="form-group">
             <label for="login-email">{{ $t('auth.email') }}</label>
             <input
@@ -56,15 +54,18 @@
             {{ $t('auth.signInButton') }}
           </button>
 
+          <button class="text-link" type="button" @click="pushLocale('/auth/reset-password')">
+            {{ $t('auth.forgotPassword') }}
+          </button>
+
           <p class="toggle-text">
             <a @click="mode = 'signup'">{{ $t('auth.switchToSignUp') }}</a>
           </p>
         </form>
 
-        <!-- Signup Form -->
-        <form v-if="mode === 'signup'" @submit.prevent="handleSignup" class="auth-form">
+        <form v-else @submit.prevent="handleSignup" class="auth-form">
           <h2>{{ $t('auth.signUp') }}</h2>
-          
+
           <div class="form-group">
             <label for="signup-email">{{ $t('auth.email') }}</label>
             <input
@@ -113,19 +114,16 @@
           </p>
         </form>
 
-        <!-- Error Message -->
-        <div v-if="authStore.error" class="error-message">
-          {{ authStore.error }}
+        <div v-if="feedbackError" class="error-message">
+          {{ feedbackError }}
         </div>
 
-        <!-- Success Message for Signup -->
         <div v-if="signupSuccess" class="success-message">
           {{ $t('auth.successMessage') }}
           <button @click="signupSuccess = false; mode = 'login'">{{ $t('auth.goToLogin') }}</button>
         </div>
       </div>
 
-      <!-- Info Section -->
       <div class="info-section">
         <h3>{{ $t('auth.whyNutriTrack') }}</h3>
         <div class="features">
@@ -152,42 +150,91 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
+import { useLocaleRoute } from '@/shared/composables/useLocaleRoute'
 
-const router = useRouter()
 const authStore = useAuthStore()
+const { t } = useI18n()
+const { pushLocale } = useLocaleRoute()
 
 const mode = ref('login')
 const loading = ref(false)
 const signupSuccess = ref(false)
+const feedbackError = ref('')
 
-// Login form
 const loginEmail = ref('')
 const loginPassword = ref('')
-
-// Signup form
 const signupEmail = ref('')
 const signupPassword = ref('')
 const signupPasswordConfirm = ref('')
 
+watch(
+  () => authStore.user,
+  (user) => {
+    if (user && !authStore.isRecoveryMode) {
+      pushLocale('/app/dashboard')
+    }
+  },
+  { immediate: true }
+)
+
+watch(mode, () => {
+  feedbackError.value = ''
+  signupSuccess.value = false
+  authStore.error = null
+})
+
+function setErrorMessage(code) {
+  if (code === 'account_exists') {
+    feedbackError.value = t('auth.errors.accountExists')
+    return
+  }
+
+  if (code === 'invalid_credentials') {
+    feedbackError.value = t('auth.errors.invalidCredentials')
+    return
+  }
+
+  if (code === 'email_not_confirmed') {
+    feedbackError.value = t('auth.errors.emailNotConfirmed')
+    return
+  }
+
+  feedbackError.value = authStore.error || t('auth.errors.generic')
+}
+
+function validateSignup() {
+  if (signupPassword.value !== signupPasswordConfirm.value) {
+    feedbackError.value = t('auth.errors.passwordMismatch')
+    return false
+  }
+
+  if (signupPassword.value.length < 6) {
+    feedbackError.value = t('auth.errors.weakPassword')
+    return false
+  }
+
+  return true
+}
+
 async function handleLogin() {
   if (loading.value) return
-  
+
   loading.value = true
+  feedbackError.value = ''
+  signupSuccess.value = false
   authStore.error = null
 
   try {
-    const { error } = await authStore.signIn(loginEmail.value, loginPassword.value)
-    
-    if (!error) {
-      // Success! Router will redirect to dashboard
-      const locale = router.currentRoute.value.params.locale || 'en'
-      router.push(`/${locale}/app/dashboard`)
+    const result = await authStore.signIn(loginEmail.value, loginPassword.value)
+    if (result.ok && result.data?.session) {
+      pushLocale('/app/dashboard')
+      return
     }
-  } catch (error) {
-    console.error('Login error:', error)
+
+    setErrorMessage(result.code)
   } finally {
     loading.value = false
   }
@@ -196,35 +243,27 @@ async function handleLogin() {
 async function handleSignup() {
   if (loading.value) return
 
-  // Validate passwords match
-  if (signupPassword.value !== signupPasswordConfirm.value) {
-    authStore.error = 'Passwords do not match' // TODO: translate this
-    return
-  }
+  feedbackError.value = ''
 
-  // Validate password length
-  if (signupPassword.value.length < 6) {
-    authStore.error = 'Password must be at least 6 characters' // TODO: translate this
+  if (!validateSignup()) {
     return
   }
 
   loading.value = true
+  signupSuccess.value = false
   authStore.error = null
 
   try {
-    const { error } = await authStore.signUp(signupEmail.value, signupPassword.value)
-    
-    if (!error) {
-      // Show success message
+    const result = await authStore.signUp(signupEmail.value, signupPassword.value)
+    if (result.ok && result.data?.user) {
       signupSuccess.value = true
-      
-      // Clear form
       signupEmail.value = ''
       signupPassword.value = ''
       signupPasswordConfirm.value = ''
+      return
     }
-  } catch (error) {
-    console.error('Signup error:', error)
+
+    setErrorMessage(result.code)
   } finally {
     loading.value = false
   }
@@ -243,7 +282,6 @@ async function handleSignup() {
   overflow: hidden;
 }
 
-/* Animated Background Orbs */
 .auth-page::before,
 .auth-page::after {
   content: '';
@@ -260,7 +298,7 @@ async function handleSignup() {
   height: 500px;
   background: linear-gradient(45deg, #667eea 0%, #764ba2 100%);
   top: -250px;
-  right: -250px;
+  left: -250px;
 }
 
 .auth-page::after {
@@ -268,8 +306,8 @@ async function handleSignup() {
   height: 400px;
   background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
   bottom: -200px;
-  left: -200px;
-  animation-delay: -10s;
+  right: -200px;
+  animation-delay: -7s;
 }
 
 @keyframes float {
@@ -285,258 +323,182 @@ async function handleSignup() {
 }
 
 .auth-container {
-  max-width: 900px;
-  width: 100%;
+  width: min(1120px, 100%);
+  display: grid;
+  grid-template-columns: minmax(0, 440px) minmax(0, 1fr);
+  gap: 2rem;
   position: relative;
   z-index: 1;
 }
 
 .auth-header {
-  text-align: center;
-  margin-bottom: 2rem;
-  color: white;
+  display: grid;
+  align-content: start;
+  gap: 0.75rem;
 }
 
 .auth-header h1 {
+  margin: 0;
   font-size: 3rem;
-  margin: 0 0 0.5rem 0;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
 }
 
 .tagline {
-  font-size: 1.25rem;
   margin: 0;
-  color: rgba(255, 255, 255, 0.9);
+  color: rgba(255, 255, 255, 0.7);
 }
 
-.auth-card {
+.auth-card,
+.info-section {
   background: rgba(255, 255, 255, 0.05);
   backdrop-filter: blur(20px);
   border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 20px;
-  padding: 2.5rem;
+  border-radius: 24px;
+  padding: 2rem;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-  margin-bottom: 2rem;
-  transition: transform 0.3s ease;
 }
 
-.auth-card:hover {
-  transform: translateY(-5px);
-}
-
-/* Tabs */
 .auth-tabs {
-  display: flex;
-  gap: 0.5rem;
-  margin-bottom: 2rem;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.auth-tabs button {
-  flex: 1;
-  padding: 1rem;
-  background: transparent;
-  border: none;
-  border-bottom: 3px solid transparent;
-  cursor: pointer;
-  font-size: 1.1rem;
-  font-weight: 500;
-  color: rgba(255, 255, 255, 0.6);
-  transition: all 0.2s;
-}
-
-.auth-tabs button:hover {
-  color: rgba(255, 255, 255, 0.9);
-}
-
-.auth-tabs button.active {
-  color: white;
-  border-bottom-color: #667eea;
-}
-
-/* Form */
-.auth-form h2 {
-  margin: 0 0 1.5rem 0;
-  color: white;
-  text-align: center;
-}
-
-.form-group {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.75rem;
   margin-bottom: 1.5rem;
 }
 
+.auth-tabs button {
+  border: none;
+  border-radius: 14px;
+  padding: 0.9rem 1rem;
+  font: inherit;
+  font-weight: 700;
+  background: rgba(255, 255, 255, 0.04);
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.auth-tabs button.active {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: #fff;
+}
+
+.auth-form {
+  display: grid;
+  gap: 1rem;
+}
+
+.auth-form h2 {
+  margin: 0;
+}
+
+.form-group {
+  display: grid;
+  gap: 0.45rem;
+}
+
 .form-group label {
-  display: block;
-  margin-bottom: 0.5rem;
-  font-weight: 500;
-  color: rgba(255, 255, 255, 0.9);
+  color: rgba(255, 255, 255, 0.72);
 }
 
 .form-group input {
   width: 100%;
-  padding: 0.875rem;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 8px;
-  font-size: 1rem;
-  color: white;
-  transition: all 0.2s;
-}
-
-.form-group input::placeholder {
-  color: rgba(255, 255, 255, 0.4);
+  padding: 0.95rem 1rem;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.04);
+  color: #fff;
+  font: inherit;
 }
 
 .form-group input:focus {
   outline: none;
-  background: rgba(255, 255, 255, 0.08);
-  border-color: #667eea;
+  border-color: rgba(102, 126, 234, 0.8);
 }
 
-.form-group .hint {
-  display: block;
-  margin-top: 0.25rem;
-  font-size: 0.875rem;
-  color: rgba(255, 255, 255, 0.6);
+.hint {
+  color: rgba(255, 255, 255, 0.52);
 }
 
 .submit-btn {
-  width: 100%;
-  padding: 1rem;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
   border: none;
-  border-radius: 8px;
-  font-size: 1.1rem;
-  font-weight: 600;
+  border-radius: 14px;
+  padding: 1rem;
+  font: inherit;
+  font-weight: 700;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: #fff;
+}
+
+.text-link,
+.toggle-text a,
+.success-message button {
+  width: fit-content;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.78);
+  font: inherit;
   cursor: pointer;
-  transition: transform 0.2s, box-shadow 0.2s;
-}
-
-.submit-btn:hover:not(:disabled) {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
-}
-
-.submit-btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.toggle-text {
-  text-align: center;
-  margin-top: 1.5rem;
-  color: rgba(255, 255, 255, 0.7);
-}
-
-.toggle-text a {
-  color: #667eea;
-  font-weight: 600;
-  cursor: pointer;
-  text-decoration: none;
-  transition: color 0.2s;
-}
-
-.toggle-text a:hover {
-  color: #764ba2;
   text-decoration: underline;
 }
 
-/* Messages */
-.error-message {
-  margin-top: 1rem;
+.toggle-text {
+  margin: 0;
+}
+
+.error-message,
+.success-message {
+  margin-top: 1.25rem;
   padding: 1rem;
-  background: #ffebee;
-  color: #c62828;
-  border-radius: 8px;
-  border-left: 4px solid #c62828;
+  border-radius: 16px;
+}
+
+.error-message {
+  background: rgba(255, 95, 95, 0.12);
+  color: #ffb1b1;
 }
 
 .success-message {
-  margin-top: 1rem;
-  padding: 1.5rem;
-  background: #e8f5e9;
-  color: #2e7d32;
-  border-radius: 8px;
-  border-left: 4px solid #4caf50;
+  display: grid;
+  gap: 0.75rem;
+  background: rgba(80, 200, 120, 0.14);
+  color: #b5efbf;
 }
 
-.success-message button {
-  margin-top: 1rem;
-  padding: 0.5rem 1rem;
-  background: #4caf50;
-  color: white;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  font-weight: 500;
-}
-
-/* Info Section */
 .info-section {
-  background: rgba(255, 255, 255, 0.03);
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 16px;
-  padding: 2rem;
-  color: white;
+  display: grid;
+  gap: 1.25rem;
 }
 
 .info-section h3 {
-  margin: 0 0 1.5rem 0;
-  text-align: center;
-  font-size: 1.5rem;
-  background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  margin: 0;
 }
 
 .features {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 1.5rem;
+  gap: 1rem;
 }
 
 .feature {
-  text-align: center;
-  transition: transform 0.2s;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.85rem;
+  align-items: start;
 }
 
-.feature:hover {
-  transform: translateY(-5px);
-}
-
-.feature .icon {
-  font-size: 2.5rem;
-  display: block;
-  margin-bottom: 0.5rem;
+.icon {
+  display: grid;
+  place-items: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
 }
 
 .feature p {
   margin: 0;
-  font-size: 0.95rem;
-  color: rgba(255, 255, 255, 0.8);
+  color: rgba(255, 255, 255, 0.76);
 }
 
-/* Responsive */
-@media (max-width: 768px) {
-  .auth-page {
-    padding: 1rem;
-  }
-
-  .auth-header h1 {
-    font-size: 2rem;
-  }
-
-  .auth-card {
-    padding: 1.5rem;
-  }
-
-  .features {
+@media (max-width: 960px) {
+  .auth-container {
     grid-template-columns: 1fr;
   }
 }

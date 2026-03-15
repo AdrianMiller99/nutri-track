@@ -6,7 +6,16 @@
   "nav": {
     "dashboard": "Dashboard",
     "search": "Suchen",
-    "logout": "Abmelden"
+    "logout": "Abmelden",
+    "today": "Heute",
+    "lists": "Listen"
+  },
+  "menu": {
+    "settings": "Einstellungen",
+    "appMenu": "App-Menü",
+    "connections": "Verbindungen",
+    "googleFitDescription": "Demnächst verfügbar. Verbinde später Aktivitäts- und Gesundheitsdaten.",
+    "placeholder": "Platzhalter"
   },
   "home": {
     "title": "Willkommen bei NutriTrack",
@@ -49,25 +58,67 @@
     "cta": {
       "getStarted": "Jetzt starten",
       "learnMore": "Mehr erfahren",
-      "login": "Anmelden"
+      "login": "Anmelden",
+      "openDiary": "Tagebuch öffnen"
     },
     "footer": {
       "builtWith": "Gebaut mit 💚 mit Vue & Supabase",
       "dataFrom": "Daten von"
     }
   },
+  "mobileHome": {
+    "eyebrow": "Native Vorschau",
+    "title": "Erfasse dein Essen schnell, mit nur einem Daumen.",
+    "copy": "Die mobile App ist für schnelles Loggen, Scannen und Überprüfen deines Tages optimiert, ohne Desktop-Chrome.",
+    "cards": {
+      "quickAdd": {
+        "kicker": "Schnell hinzufügen",
+        "title": "Suche und Barcode-Flows stehen ganz vorne."
+      },
+      "glance": {
+        "kicker": "Auf einen Blick",
+        "title": "Kalorien und Makros bleiben sichtbar, ohne durch Desktop-UI scrollen zu müssen."
+      },
+      "touchFirst": {
+        "kicker": "Touch zuerst",
+        "title": "Große Touch-Ziele, untere Navigation und Sheet-artige Produktdetails."
+      }
+    }
+  },
   "auth": {
     "signIn": "Anmelden",
     "signUp": "Registrieren",
+    "loading": "Deine Sitzung wird wiederhergestellt...",
+    "mobileEyebrow": "Mobile App",
+    "accountTitle": "Konto",
     "email": "E-Mail",
     "password": "Passwort",
     "confirmPassword": "Passwort bestätigen",
     "signInButton": "Anmelden",
     "signUpButton": "Registrieren",
+    "forgotPassword": "Passwort vergessen?",
+    "switchAccount": "Konto wechseln",
     "switchToSignUp": "Noch kein Konto? Jetzt registrieren",
     "switchToSignIn": "Bereits ein Konto? Jetzt anmelden",
     "successMessage": "✅ Konto erstellt! Bitte überprüfe deine E-Mail, um dein Konto zu bestätigen.",
     "goToLogin": "Zur Anmeldung",
+    "placeholders": {
+      "newPassword": "Mindestens 6 Zeichen",
+      "confirmPassword": "Passwort wiederholen"
+    },
+    "resetPassword": {
+      "eyebrow": "Kontowiederherstellung",
+      "title": "Passwort zurücksetzen",
+      "requestDescription": "Gib deine E-Mail ein und wir senden dir einen Reset-Link, falls ein Konto existiert.",
+      "recoveryDescription": "Wähle ein neues Passwort für dein Nutri Track Konto.",
+      "sendLink": "Reset-Link senden",
+      "updateButton": "Passwort aktualisieren",
+      "newPassword": "Neues Passwort",
+      "emailSent": "Falls für diese E-Mail ein Konto existiert, haben wir einen Reset-Link gesendet.",
+      "success": "Dein Passwort wurde erfolgreich aktualisiert.",
+      "invalidLink": "Dieser Wiederherstellungslink ist ungültig oder abgelaufen. Fordere unten einen neuen Reset-Link an.",
+      "backToSignIn": "Zurück zur Anmeldung"
+    },
     "whyNutriTrack": "Warum NutriTrack?",
     "features": {
       "search": "Durchsuche 3M+ Lebensmittel von Open Food Facts",
@@ -75,10 +126,24 @@
       "mobile": "Funktioniert auf Web und Mobilgeräten (Android)",
       "secure": "Deine Daten sind privat und sicher"
     },
+    "mobileCards": {
+      "fastCapture": {
+        "title": "Schnell erfasst",
+        "copy": "Suche oder scanne direkt vom Handy mit nur wenigen Fingertipps."
+      },
+      "privateAccount": {
+        "title": "Privates Konto",
+        "copy": "Dein Tagebuch bleibt mit deinem authentifizierten Supabase-Benutzer verknüpft."
+      }
+    },
     "errors": {
       "passwordMismatch": "Passwörter stimmen nicht überein",
       "invalidEmail": "Ungültige E-Mail-Adresse",
-      "weakPassword": "Passwort muss mindestens 6 Zeichen lang sein"
+      "weakPassword": "Passwort muss mindestens 6 Zeichen lang sein",
+      "accountExists": "Für diese E-Mail existiert bereits ein Konto.",
+      "invalidCredentials": "E-Mail oder Passwort sind nicht korrekt.",
+      "emailNotConfirmed": "Bitte bestätige zuerst deine E-Mail, bevor du dich anmeldest.",
+      "generic": "Etwas ist schiefgelaufen. Bitte versuche es erneut."
     }
   },
   "dashboard": {
@@ -109,6 +174,7 @@
     "hideDetails": "Details ausblenden",
     "foodLog": "Ernährungstagebuch",
     "delete": "Löschen",
+    "sectionEyebrow": "Protokolliert",
     "confirmDelete": "{item} löschen?",
     "editServing": {
       "title": "Portionsgröße bearbeiten",
@@ -167,15 +233,82 @@
       "formats": "Unterstützt EAN-13, UPC, Code-128, QR-Codes und mehr",
       "or": "ODER",
       "manualEntry": "Barcode manuell eingeben",
-      "notSupported": "Barcode-Scannen wird in diesem Browser nicht unterstützt. Bitte verwende die manuelle Eingabe oder versuche es mit Chrome/Edge auf Android."
+      "notSupported": "Barcode-Scannen wird in diesem Browser nicht unterstützt. Bitte verwende die manuelle Eingabe oder versuche es mit Chrome/Edge auf Android.",
+      "unavailableHere": "Barcode-Scannen ist hier nicht verfügbar. Nutze die manuelle Eingabe."
+    },
+    "mobile": {
+      "searchProducts": "Produkte suchen",
+      "hideCodeInput": "Code-Eingabe ausblenden",
+      "startTyping": "Beginne zu tippen, um Open Food Facts zu durchsuchen.",
+      "addToDiary": "Zum Tagebuch hinzufügen",
+      "addToList": "{grams}g zu {list} hinzufügen",
+      "addToListCta": "Zur Liste hinzufügen",
+      "createListFirst": "Erstelle zuerst eine Liste",
+      "chooseList": "Liste wählen",
+      "saveProduct": "{name} speichern",
+      "scannerEyebrow": "Scanner"
     },
     "errors": {
       "productNotFound": "Produkt nicht gefunden. Der Barcode ist möglicherweise nicht in der Datenbank.",
       "cameraPermission": "Kameraberechtigung verweigert. Bitte erlaube den Kamerazugriff und versuche es erneut.",
-      "cameraFailed": "Kamera konnte nicht gestartet werden"
+      "cameraFailed": "Kamera konnte nicht gestartet werden",
+      "cameraAccessDisabled": "Der Kamerazugriff für das Barcode-Scannen ist deaktiviert.",
+      "cameraPermissionNotGranted": "Die Kameraberechtigung wurde nicht erteilt.",
+      "scannerError": "Scanner-Fehler: {message}"
     },
     "success": {
       "added": "{grams}g von {name} zu {date} hinzugefügt!"
+    },
+    "messages": {
+      "addedToDiary": "{name} hinzugefügt",
+      "savedToList": "{name} zu {list} gespeichert"
+    }
+  },
+  "lists": {
+    "savedCollections": "Gespeicherte Sammlungen",
+    "yourLists": "Deine Listen",
+    "hero": {
+      "title": "Erstelle wiederverwendbare Lebensmittellisten für Mahlzeiten, Einkäufe oder Routinen.",
+      "copy": "Erstelle eine Liste einmal und füge dann direkt aus der Suche Lebensmittel hinzu, sobald du etwas speichern möchtest."
+    },
+    "empty": {
+      "title": "Noch keine Listen.",
+      "copy": "Erstelle eine Liste, um Lebensmittel außerhalb des täglichen Tagebuchs zu speichern."
+    },
+    "emptyList": {
+      "title": "Diese Liste ist leer.",
+      "copy": "Nutze den Button oben, um die Suche zu öffnen und Produkte darin zu speichern."
+    },
+    "itemCount": "{count} Einträge",
+    "savedItemCount": "{count} gespeicherte Einträge",
+    "newList": "Neue Liste",
+    "nameList": "Benenne deine Liste",
+    "listName": "Listenname",
+    "createList": "Liste erstellen",
+    "createNew": "Neue Liste erstellen",
+    "details": "Listendetails",
+    "addFoods": "Lebensmittel hinzufügen",
+    "addFoodsToList": "Lebensmittel zu dieser Liste hinzufügen",
+    "addAllToDay": "Alles zu einem Tag hinzufügen",
+    "chooseDay": "Tag wählen",
+    "addListToDay": "{name} hinzufügen",
+    "willBeAdded": "{count} Einträge werden hinzugefügt",
+    "pastDay": "Vergangener Tag",
+    "selectDate": "Datum auswählen",
+    "addAllItemsToDate": "Alle Einträge zu {date} hinzufügen",
+    "manage": "Listen verwalten",
+    "deleteList": "Liste löschen",
+    "removeItem": "Eintrag entfernen",
+    "confirmDelete": "\"{name}\" löschen?",
+    "placeholders": {
+      "name": "Wöchentliches Frühstück"
+    },
+    "messages": {
+      "chooseValidDay": "Wähle zuerst einen gültigen Tag",
+      "addedToDay": "{count} Einträge zu {date} hinzugefügt"
+    },
+    "errors": {
+      "notFound": "Liste nicht gefunden"
     }
   },
   "language": {

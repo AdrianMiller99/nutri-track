@@ -2,6 +2,7 @@
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { BarcodeScanner } from '@capacitor-mlkit/barcode-scanning'
 import { Capacitor } from '@capacitor/core'
+import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 import { useDayStore } from '@/stores/day'
 import { useFoodStore } from '@/stores/food'
@@ -10,6 +11,7 @@ import { useDaySwipe } from '@/shared/composables/useDaySwipe'
 import { useLocaleRoute } from '@/shared/composables/useLocaleRoute'
 
 const authStore = useAuthStore()
+const { t } = useI18n()
 const dayStore = useDayStore()
 const foodStore = useFoodStore()
 const listsStore = useListsStore()
@@ -210,7 +212,7 @@ async function addToLog() {
 
   try {
     await dayStore.addItem(selectedProduct.value, servingGrams.value, calculatedNutrients.value)
-    setStatus(`Added ${selectedProduct.value.name}`, 'success')
+    setStatus(t('search.messages.addedToDiary', { name: selectedProduct.value.name }), 'success')
     closeProductSheet()
   } catch (error) {
     setStatus(error.message, 'error')
@@ -241,11 +243,11 @@ async function addToList(listId) {
   try {
     const list = listsStore.getListById(listId)
     if (!list) {
-      throw new Error('List not found')
+      throw new Error(t('lists.errors.notFound'))
     }
 
     listsStore.addItemToList(listId, selectedProduct.value, servingGrams.value, calculatedNutrients.value)
-    setStatus(`Saved ${selectedProduct.value.name} to ${list.name}`, 'success')
+    setStatus(t('search.messages.savedToList', { name: selectedProduct.value.name, list: list.name }), 'success')
     closeProductSheet()
   } catch (error) {
     setStatus(error.message, 'error')
@@ -260,7 +262,7 @@ async function lookupBarcode() {
     return
   }
 
-  setStatus(foodStore.productError || 'Product not found', 'error')
+  setStatus(foodStore.productError || t('search.errors.productNotFound'), 'error')
 }
 
 async function handleScannedBarcode(scannedBarcode) {
@@ -283,14 +285,14 @@ async function scanBarcodeNative() {
     const { camera } = await BarcodeScanner.checkPermissions()
 
     if (camera === 'denied') {
-      setStatus('Camera access is disabled for barcode scanning', 'error')
+      setStatus(t('search.errors.cameraAccessDisabled'), 'error')
       return
     }
 
     if (camera !== 'granted') {
       const permission = await BarcodeScanner.requestPermissions()
       if (permission.camera !== 'granted') {
-        setStatus('Camera permission was not granted', 'error')
+        setStatus(t('search.errors.cameraPermissionNotGranted'), 'error')
         return
       }
     }
@@ -314,7 +316,7 @@ async function scanBarcodeBrowser() {
   try {
     if (!('BarcodeDetector' in window)) {
       showManualBarcode.value = true
-      setStatus('Barcode scanning is unavailable here. Use manual entry.', 'error')
+      setStatus(t('search.scanner.unavailableHere'), 'error')
       return
     }
 
@@ -340,7 +342,7 @@ async function scanBarcodeBrowser() {
 
     scanFrame(video)
   } catch (error) {
-    setStatus(`Scanner error: ${error.message}`, 'error')
+    setStatus(t('search.errors.scannerError', { message: error.message }), 'error')
     await stopBrowserScanner()
   } finally {
     scanning.value = false
@@ -410,7 +412,7 @@ function setupInfiniteScroll() {
     <div class="search-stack">
       <div class="search-panel">
         <label class="field-block">
-          <span>Search products</span>
+          <span>{{ $t('search.mobile.searchProducts') }}</span>
           <div class="field-row">
             <input
               v-model="query"
@@ -418,7 +420,13 @@ function setupInfiniteScroll() {
               :placeholder="$t('search.searchPlaceholder')"
               @input="handleSearch"
             >
-            <button v-if="query" class="icon-btn" @click="clearSearch">×</button>
+            <button v-if="query" class="icon-btn danger-icon-btn" :aria-label="$t('search.clear')" @click="clearSearch">
+              <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+                <path d="M18 6l-12 12" />
+                <path d="M6 6l12 12" />
+              </svg>
+            </button>
           </div>
         </label>
 
@@ -427,7 +435,7 @@ function setupInfiniteScroll() {
             {{ scanning ? $t('search.scanning') : $t('search.scanBarcode') }}
           </button>
           <button class="ghost-btn" @click="showManualBarcode = !showManualBarcode">
-            {{ showManualBarcode ? 'Hide code input' : 'Enter barcode' }}
+            {{ showManualBarcode ? $t('search.mobile.hideCodeInput') : $t('search.scanner.manualEntry') }}
           </button>
         </div>
 
@@ -452,10 +460,10 @@ function setupInfiniteScroll() {
       <section class="results-section">
         <div class="section-head">
           <div>
-            <p class="eyebrow">Results</p>
+            <p class="eyebrow">{{ $t('search.results') }}</p>
             <h2>{{ foodStore.searchResults.length }}</h2>
           </div>
-          <small v-if="foodStore.searchTotalCount > 0">of {{ foodStore.searchTotalCount }}</small>
+          <small v-if="foodStore.searchTotalCount > 0">{{ $t('search.of') }} {{ foodStore.searchTotalCount }}</small>
         </div>
 
         <div v-if="foodStore.searchLoading && !foodStore.hasSearchResults" class="product-list">
@@ -469,7 +477,7 @@ function setupInfiniteScroll() {
           </article>
         </div>
         <div v-else-if="!foodStore.hasSearchResults" class="state-card">
-          Start typing to search Open Food Facts.
+          {{ $t('search.mobile.startTyping') }}
         </div>
 
         <div v-else class="product-list">
@@ -523,7 +531,7 @@ function setupInfiniteScroll() {
       >
         <div class="sheet-header">
           <div>
-            <p class="eyebrow">Add to diary</p>
+            <p class="eyebrow">{{ $t('search.mobile.addToDiary') }}</p>
             <h3>{{ selectedProduct.name }}</h3>
             <span>{{ selectedProduct.brand }}</span>
           </div>
@@ -536,7 +544,7 @@ function setupInfiniteScroll() {
           <span>{{ $t('search.calculator.servingSize') }}</span>
           <div class="serving-input-row">
             <input ref="servingInput" v-model.number="servingGrams" type="number" min="1" step="1">
-            <button type="button" class="serving-edit-btn" @click="focusServingInput" aria-label="Edit serving size">
+            <button type="button" class="serving-edit-btn" @click="focusServingInput" :aria-label="$t('dashboard.editServing.title')">
               <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
                 <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
                 <path d="M12.085 6.5l5.415 5.415l-8.793 8.792a1 1 0 0 1 -.707 .293h-4a1 1 0 0 1 -1 -1v-4a1 1 0 0 1 .293 -.707zm5.406 -2.698a3.828 3.828 0 0 1 1.716 6.405l-.292 .293l-5.415 -5.415l.293 -.292a3.83 3.83 0 0 1 3.698 -.991" />
@@ -551,15 +559,15 @@ function setupInfiniteScroll() {
             <strong>{{ calculatedNutrients.energy_kcal }}</strong>
           </div>
           <div>
-            <span>Protein</span>
+            <span>{{ $t('search.nutrients.protein') }}</span>
             <strong>{{ calculatedNutrients.proteins }}g</strong>
           </div>
           <div>
-            <span>Carbs</span>
+            <span>{{ $t('search.nutrients.carbohydrates') }}</span>
             <strong>{{ calculatedNutrients.carbohydrates }}g</strong>
           </div>
           <div>
-            <span>Fat</span>
+            <span>{{ $t('search.nutrients.fat') }}</span>
             <strong>{{ calculatedNutrients.fat }}g</strong>
           </div>
         </div>
@@ -571,21 +579,21 @@ function setupInfiniteScroll() {
             class="secondary-btn"
             @click="addToList(targetList.id)"
           >
-            Add {{ servingGrams }}g to {{ targetList.name }}
+            {{ $t('search.mobile.addToList', { grams: servingGrams, list: targetList.name }) }}
           </button>
           <button
             v-else-if="listsStore.hasLists"
             class="secondary-btn"
             @click="openListPicker"
           >
-            Add to list
+            {{ $t('search.mobile.addToListCta') }}
           </button>
           <button
             v-else
             class="secondary-btn"
             @click="openListsScreen"
           >
-            Create a list first
+            {{ $t('search.mobile.createListFirst') }}
           </button>
         </div>
       </div>
@@ -595,8 +603,8 @@ function setupInfiniteScroll() {
       <div class="sheet picker-sheet" @click.stop>
         <div class="sheet-header">
           <div>
-            <p class="eyebrow">Choose list</p>
-            <h3>Save {{ selectedProduct?.name }}</h3>
+            <p class="eyebrow">{{ $t('search.mobile.chooseList') }}</p>
+            <h3>{{ $t('search.mobile.saveProduct', { name: selectedProduct?.name }) }}</h3>
           </div>
           <button class="close-btn" @click="closeListPicker">×</button>
         </div>
@@ -609,11 +617,11 @@ function setupInfiniteScroll() {
             @click="addToList(list.id)"
           >
             <strong>{{ list.name }}</strong>
-            <span>{{ list.items.length }} item<span v-if="list.items.length !== 1">s</span></span>
+            <span>{{ $t('lists.itemCount', { count: list.items.length }) }}</span>
           </button>
         </div>
 
-        <button class="secondary-btn manage-btn" @click="openListsScreen">Manage lists</button>
+        <button class="secondary-btn manage-btn" @click="openListsScreen">{{ $t('lists.manage') }}</button>
       </div>
     </div>
 
@@ -621,7 +629,7 @@ function setupInfiniteScroll() {
       <div class="sheet" @click.stop>
         <div class="sheet-header">
           <div>
-            <p class="eyebrow">Scanner</p>
+            <p class="eyebrow">{{ $t('search.mobile.scannerEyebrow') }}</p>
             <h3>{{ $t('search.scanner.title') }}</h3>
           </div>
           <button class="close-btn" @click="stopBrowserScanner">×</button>
@@ -630,8 +638,8 @@ function setupInfiniteScroll() {
           <video id="mobile-barcode-video" autoplay playsinline></video>
         </div>
         <label class="sheet-field">
-          <span>Manual barcode</span>
-          <input v-model="manualBarcode" type="text" placeholder="Enter barcode" @keyup.enter="handleScannedBarcode(manualBarcode)">
+          <span>{{ $t('search.scanner.manualEntry') }}</span>
+          <input v-model="manualBarcode" type="text" :placeholder="$t('search.barcodePlaceholder')" @keyup.enter="handleScannedBarcode(manualBarcode)">
         </label>
       </div>
     </div>
@@ -713,6 +721,21 @@ input:focus {
   border-radius: 18px;
   background: rgba(255, 255, 255, 0.08);
   color: white;
+}
+
+.icon-btn {
+  flex: 0 0 auto;
+  width: 2.85rem;
+  height: 2.85rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+
+.danger-icon-btn {
+  background: rgba(255, 95, 95, 0.16);
+  color: #ff9e9e;
 }
 
 .action-grid {
@@ -1004,6 +1027,12 @@ input:focus {
 .add-btn,
 .secondary-btn {
   width: 100%;
+}
+
+.manage-btn {
+  background: linear-gradient(135deg, #ffd166 0%, #ef8354 100%);
+  color: #18120d;
+  font-weight: 700;
 }
 
 .list-picker-grid {

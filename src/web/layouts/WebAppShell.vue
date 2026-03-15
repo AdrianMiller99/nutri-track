@@ -1,15 +1,17 @@
 <script setup>
+import { computed } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { useLocaleRoute } from '@/shared/composables/useLocaleRoute'
 
 const authStore = useAuthStore()
-const { route, router, currentLocale, pushLocale } = useLocaleRoute()
+const { route, router, currentLocale } = useLocaleRoute()
 
 const availableLocales = ['en', 'de']
+const showNav = computed(() => authStore.user && route.path.includes('/app/'))
 
 async function logout() {
   await authStore.signOut()
-  pushLocale('/auth')
+  router.replace(`/${currentLocale.value}/auth`)
 }
 
 function switchLocale(newLocale) {
@@ -21,7 +23,7 @@ function switchLocale(newLocale) {
 
 <template>
   <div class="web-shell">
-    <nav v-if="authStore.user && !route.path.endsWith('/') && !route.path.endsWith('/auth')" class="navbar">
+    <nav v-if="showNav" class="navbar">
       <div class="nav-container">
         <router-link :to="`/${currentLocale}`" class="logo-link">
           <h1 class="logo">🍎 {{ $t('app.name') }}</h1>
@@ -53,7 +55,7 @@ function switchLocale(newLocale) {
       </div>
     </nav>
 
-    <main :class="{ 'with-nav': authStore.user && route.path !== '/' && route.path !== '/auth' }">
+    <main :class="{ 'with-nav': showNav }">
       <router-view />
     </main>
   </div>

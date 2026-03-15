@@ -1,16 +1,29 @@
 <script setup>
 import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 import { useLocaleRoute } from '@/shared/composables/useLocaleRoute'
 
 const authStore = useAuthStore()
-const { currentLocale, pushLocale } = useLocaleRoute()
+const { t } = useI18n()
+const { router, pushLocale } = useLocaleRoute()
 
-const primaryActionLabel = computed(() => (authStore.user ? 'Open diary' : 'Get started'))
+const primaryActionLabel = computed(() => (authStore.user ? t('home.cta.openDiary') : t('home.cta.getStarted')))
+const secondaryActionLabel = computed(() => (authStore.user ? t('auth.switchAccount') : t('home.cta.login')))
 
 function goPrimary() {
   if (authStore.user) {
     pushLocale('/app/dashboard')
+    return
+  }
+
+  pushLocale('/auth')
+}
+
+async function goSecondary() {
+  if (authStore.user) {
+    await authStore.signOut()
+    router.replace(`/${currentLocale.value}/auth`)
     return
   }
 
@@ -21,46 +34,46 @@ function goPrimary() {
 <template>
   <section class="mobile-home">
     <div class="hero-card">
-      <p class="eyebrow">Native Preview</p>
-      <h1>Track food fast, one thumb at a time.</h1>
-      <p class="copy">
-        The mobile app is optimized for quick logging, scanning, and reviewing your day without desktop chrome.
-      </p>
+      <p class="eyebrow">{{ $t('mobileHome.eyebrow') }}</p>
+      <h1>{{ $t('mobileHome.title') }}</h1>
+      <p class="copy">{{ $t('mobileHome.copy') }}</p>
 
       <div class="hero-actions">
         <button class="primary-btn" @click="goPrimary">
           {{ primaryActionLabel }}
         </button>
-        <button class="secondary-btn" @click="pushLocale('/auth')">
-          {{ authStore.user ? 'Switch account' : 'Sign in' }}
+        <button class="secondary-btn" @click="goSecondary">
+          {{ secondaryActionLabel }}
         </button>
       </div>
     </div>
 
     <div class="highlight-grid">
       <article class="highlight-card">
-        <span class="highlight-kicker">Quick add</span>
-        <h2>Search and barcode flows are front and center.</h2>
+        <span class="highlight-kicker">{{ $t('mobileHome.cards.quickAdd.kicker') }}</span>
+        <h2>{{ $t('mobileHome.cards.quickAdd.title') }}</h2>
       </article>
       <article class="highlight-card">
-        <span class="highlight-kicker">At-a-glance</span>
-        <h2>Calories and macros stay visible without scrolling through desktop UI.</h2>
+        <span class="highlight-kicker">{{ $t('mobileHome.cards.glance.kicker') }}</span>
+        <h2>{{ $t('mobileHome.cards.glance.title') }}</h2>
       </article>
       <article class="highlight-card">
-        <span class="highlight-kicker">Touch-first</span>
-        <h2>Large hit targets, bottom navigation, and sheet-style product details.</h2>
+        <span class="highlight-kicker">{{ $t('mobileHome.cards.touchFirst.kicker') }}</span>
+        <h2>{{ $t('mobileHome.cards.touchFirst.title') }}</h2>
       </article>
     </div>
-
-    <div class="locale-pill">{{ currentLocale.toUpperCase() }}</div>
   </section>
 </template>
 
 <style scoped>
 .mobile-home {
   min-height: 100vh;
-  padding: calc(env(safe-area-inset-top, 0px) + 1.5rem) 1rem 2rem;
+  padding: calc(env(safe-area-inset-top, 0px) + 1.25rem) 1rem calc(env(safe-area-inset-bottom, 0px) + 1.25rem);
   color: white;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 0.9rem;
 }
 
 .hero-card {
@@ -120,8 +133,7 @@ button {
 
 .highlight-grid {
   display: grid;
-  gap: 0.9rem;
-  margin-top: 1rem;
+  gap: 0.75rem;
 }
 
 .highlight-card {
@@ -137,13 +149,4 @@ button {
   line-height: 1.3;
 }
 
-.locale-pill {
-  width: fit-content;
-  margin: 1.25rem auto 0;
-  padding: 0.55rem 0.85rem;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.08);
-  color: rgba(255, 255, 255, 0.7);
-  font-size: 0.8rem;
-}
 </style>

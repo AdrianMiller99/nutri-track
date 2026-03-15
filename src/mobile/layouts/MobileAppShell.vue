@@ -14,18 +14,18 @@ const { t } = useI18n()
 const supportedLocales = ['en', 'de']
 
 const tabItems = computed(() => [
-  { label: 'Today', icon: '◎', to: `/${currentLocale.value}/app/dashboard` },
-  { label: 'Search', icon: '⌕', to: `/${currentLocale.value}/app/search` },
-  { label: 'Lists', icon: '▤', to: `/${currentLocale.value}/app/lists` },
+  { label: t('nav.today'), icon: '◎', to: `/${currentLocale.value}/app/dashboard` },
+  { label: t('nav.search'), icon: '⌕', to: `/${currentLocale.value}/app/search` },
+  { label: t('nav.lists'), icon: '▤', to: `/${currentLocale.value}/app/lists` },
 ])
 
 const showTabBar = computed(() => authStore.user && route.path.includes('/app/'))
 const pageEyebrow = computed(() => {
   if (route.path.endsWith('/app/search')) return t('nav.search')
   if (route.path.endsWith('/app/dashboard')) return t('nav.dashboard')
-  if (route.path.endsWith('/app/lists')) return 'Saved lists'
-  if (route.path.endsWith('/auth')) return 'Account'
-  return 'Nutri Track'
+  if (route.path.endsWith('/app/lists')) return t('lists.savedCollections')
+  if (route.path.endsWith('/auth')) return t('auth.accountTitle')
+  return t('app.name')
 })
 
 const pageTitle = computed(() => {
@@ -33,9 +33,9 @@ const pageTitle = computed(() => {
     return formatHeaderDateLabel(dayStore.selectedDate)
   }
 
-  if (route.path.endsWith('/app/lists')) return 'Lists'
-  if (route.path.endsWith('/auth')) return 'Account'
-  return 'Nutri Track'
+  if (route.path.endsWith('/app/lists')) return t('nav.lists')
+  if (route.path.endsWith('/auth')) return t('auth.accountTitle')
+  return t('app.name')
 })
 
 function formatHeaderDateLabel(dateString) {
@@ -66,7 +66,7 @@ function getRelativeDateString(dayOffset) {
 async function logout() {
   closeMenu()
   await authStore.signOut()
-  router.push(`/${currentLocale.value}/auth`)
+  router.replace(`/${currentLocale.value}/auth`)
 }
 
 function openMenu() {
@@ -134,7 +134,13 @@ onUnmounted(() => {
         <p class="eyebrow">{{ pageEyebrow }}</p>
         <h1>{{ pageTitle }}</h1>
       </div>
-      <button class="header-action" @click="logout">Log out</button>
+      <button class="header-action danger-icon-btn" :aria-label="$t('nav.logout')" @click="logout">
+        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+          <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+          <path d="M14 3.5a1 1 0 0 1 1 1v3a1 1 0 1 1 -2 0v-2h-6v13h6v-2a1 1 0 1 1 2 0v3a1 1 0 0 1 -1 1h-7a2 2 0 0 1 -2 -2v-14a2 2 0 0 1 2 -2z" />
+          <path d="M13.793 11h5.793a1 1 0 0 1 .117 1.993l-.117 .007h-5.793l1.5 1.5a1 1 0 0 1 -1.32 1.497l-.094 -.083l-3.2 -3.2a1 1 0 0 1 -.083 -1.32l.083 -.094l3.2 -3.2a1 1 0 0 1 1.497 1.32l-.083 .094z" />
+        </svg>
+      </button>
     </header>
 
     <main :class="['mobile-main', { 'with-tabbar': showTabBar, 'with-header': showTabBar }]">
@@ -157,14 +163,14 @@ onUnmounted(() => {
       <aside class="menu-drawer" @click.stop>
         <div class="menu-header">
           <div>
-            <p class="eyebrow">Settings</p>
-            <h2>App menu</h2>
+            <p class="eyebrow">{{ $t('menu.settings') }}</p>
+            <h2>{{ $t('menu.appMenu') }}</h2>
           </div>
           <button class="header-icon-btn close-menu-btn" aria-label="Close menu" @click="closeMenu">×</button>
         </div>
 
         <section class="menu-section">
-          <p class="menu-kicker">Language</p>
+          <p class="menu-kicker">{{ $t('language.switch') }}</p>
           <div class="locale-toggle">
             <button
               v-for="locale in supportedLocales"
@@ -178,13 +184,13 @@ onUnmounted(() => {
         </section>
 
         <section class="menu-section">
-          <p class="menu-kicker">Connections</p>
+          <p class="menu-kicker">{{ $t('menu.connections') }}</p>
           <div class="placeholder-card">
             <div>
               <strong>Google Fit</strong>
-              <span>Coming soon. Connect activity and health data later.</span>
+              <span>{{ $t('menu.googleFitDescription') }}</span>
             </div>
-            <small>Placeholder</small>
+            <small>{{ $t('menu.placeholder') }}</small>
           </div>
         </section>
       </aside>
@@ -264,7 +270,18 @@ onUnmounted(() => {
 }
 
 .header-action {
-  padding: 0.75rem 0.95rem;
+  flex: 0 0 auto;
+  width: 2.95rem;
+  height: 2.95rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+
+.danger-icon-btn {
+  background: rgba(255, 95, 95, 0.16);
+  color: #ff9e9e;
 }
 
 .mobile-main {

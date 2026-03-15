@@ -17,14 +17,19 @@ onMounted(async () => {
     return
   }
 
-  // Initialize auth state
-  await authStore.init()
+  await authStore.ensureInitialized()
 })
 </script>
 
 <template>
   <div id="app">
     <SetupErrorScreen v-if="!hasSupabaseConfig" :missing-keys="missingSupabaseEnvVars" />
+    <div v-else-if="authStore.loading && !authStore.initialized" class="app-bootstrap">
+      <div class="bootstrap-card">
+        <h1>{{ $t('app.name') }}</h1>
+        <p>{{ $t('auth.loading') }}</p>
+      </div>
+    </div>
     <component :is="activeShell" v-else />
   </div>
 </template>
@@ -44,5 +49,32 @@ body {
 
 #app {
   min-height: 100vh;
+}
+
+.app-bootstrap {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 2rem;
+  background: radial-gradient(circle at top, rgba(255, 209, 102, 0.16), transparent 40%), #0a0a0a;
+}
+
+.bootstrap-card {
+  width: min(420px, 100%);
+  padding: 2rem;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.04);
+  text-align: center;
+}
+
+.bootstrap-card h1 {
+  margin: 0 0 0.75rem;
+  font-size: 2rem;
+}
+
+.bootstrap-card p {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.7);
 }
 </style>
